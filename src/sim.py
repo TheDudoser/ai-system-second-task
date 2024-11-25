@@ -90,7 +90,26 @@ class Sim:
             # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
 
         # TODO: Материал для выполнения ТО
-        # ...
+        # TODO: Технологические газы
+            # TODO: Моногазы
+            # TODO: Газовые смеси
+
+        # TODO: Требования к результату операции
+        ror = find_meta_value(tz, RequirementsOperationResult.ROR.value)
+        ror_new = find_meta_value(tz_new, RequirementsOperationResult.ROR.value)
+
+        # Требования к результату операции -> Геометрические характеристики
+        result_sim_ror_char = Sim.compare_geometrical_characteristics(
+            ror,
+            ror_new
+        )
+        result[
+            RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.GEOM_CHARS.normalize()
+        ] = result_sim_ror_char.value
+        # TODO: Требования к результату операции -> Дефекты наплавленного материала
+        # TODO: Требования к результату операции -> Элементный состав
+        # В рамках нашей задачи не реализуем - Требования к результату операции -> Микроструктура
+
         return result
 
     # TODO: Возможно, стоит подумать чтобы возвращать ещё и названия
