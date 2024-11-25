@@ -69,6 +69,10 @@ class TestSim(unittest.TestCase):
         # TODO: Ждём подобие эл. составов от Матвея
         pass
 
+    def test_materials_detail(self):
+        # TODO: Уточнения требований от Вадима
+        pass
+
     def test_mass_one_interval(self):
         # 1 пункт
         tz_first_interval = load_fixture("mass/tz_first_interval.json")

@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Substrate(Enum):
+class SubstrateDetail(Enum):
     MATERIAL = 'Материал'
     MASS = 'Масса'
     GEOM_CHARS = 'Геометрические характеристики'

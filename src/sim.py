@@ -5,7 +5,7 @@ from src.interval import Interval
 from src.path_utils import split_path, replace_path_last_part
 from src.element_types.material import Material
 from src.element_types.processing_object import ProcessingObject
-from src.element_types.substrate import Substrate
+from src.element_types.substrate_detail import SubstrateDetail
 from src.extract_element_utils import find_name_value, find_meta_value
 from src.mark import Mark
 
@@ -22,57 +22,67 @@ class Sim:
 
     @staticmethod
     def compare(tz, tz_new):
-        # TODO: ключами должны быть наименования или классы? К примеру, 'Объект обработки' или 'Подложка'?
-        # Ответ: Берём только 'Объект обработки' и он всегда один Подложка/Деталь
+        # Ключами должны быть классы? К примеру, 'Объект обработки', а не 'Подложка'
         result = dict()
+
         # Сравнение Объектов обработки
 
-        # Объект обработки -> Подложка
+        # Объект обработки
         processing_object = find_meta_value(tz, ProcessingObject.PO.value)
         processing_object_new = find_meta_value(tz_new, ProcessingObject.PO.value)
 
-        processing_object_substrate = find_meta_value(processing_object, ProcessingObject.SUBSTRATE.value)
-        processing_object_substrate_new = find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE.value)
+        # Объект обработки -> Подложка / Деталь
+        # TODO: Может быть либо Подложка, либо Деталь, но есть нюанс в сравнении материалов детали
+        is_substrate = False
+        if find_meta_value(processing_object, ProcessingObject.SUBSTRATE.value):
+            is_substrate = True
+            processing_object_concrete = find_meta_value(processing_object, ProcessingObject.SUBSTRATE.value)
+            processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE.value)
+        else:
+            processing_object_concrete = find_meta_value(processing_object, ProcessingObject.DETAIL.value)
+            processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.DETAIL.value)
 
-        if processing_object_substrate and processing_object_substrate_new:
-            processing_object_substrate, processing_object_substrate_new = Sim.resolve_pass_tz(
-                processing_object_substrate, processing_object_substrate_new
+        if processing_object_concrete and processing_object_concrete_new:
+            processing_object_concrete, processing_object_concrete_new = Sim.resolve_pass_tz(
+                processing_object_concrete, processing_object_concrete_new
             )
 
-            # TODO: Подложка -> Материал
-            result_sim_substrate_material = Sim.compare_materials(
-                processing_object_substrate,
-                processing_object_substrate_new
+            # Подложка -> Материал
+            if is_substrate:
+                result_sim_po_materials = Sim.compare_materials(
+                    processing_object_concrete,
+                    processing_object_concrete_new
+                )
+            else: # TODO: Учесть нюанс материалов для Деталей
+                # Не уверен насчёт этого кода...
+                base = find_meta_value(processing_object_concrete, "Основа")
+                work_surface = find_meta_value(processing_object_concrete, "Рабочая поверхность")
+                # TODO
+                pass
+
+            result[
+                ProcessingObject.PO.value + '.' + SubstrateDetail.MATERIAL.value
+            ] = result_sim_po_materials.value
+
+            # Подложка -> Масса
+            result_sim_po_mass = Sim.compare_mass(
+                processing_object_concrete,
+                processing_object_concrete_new
             )
             result[
-                ProcessingObject.PO.value + '.' + ProcessingObject.SUBSTRATE.value + '.' + Substrate.MATERIAL.value
-            ] = result_sim_substrate_material.value
-
-            # TODO: Подложка -> Масса
-            result_sim_substrate_mass = Sim.compare_mass(
-                processing_object_substrate,
-                processing_object_substrate_new
-            )
-            result[
-                ProcessingObject.PO.value + '.' + ProcessingObject.SUBSTRATE.value + '.' + Substrate.MASS.value
-            ] = result_sim_substrate_mass.value
+                ProcessingObject.PO.value + '.' + SubstrateDetail.MASS.value
+            ] = result_sim_po_mass.value
 
             # Подложка -> Геометрические характеристики
-            result_sim_substrate_char = Sim.compare_geometrical_characteristics(
-                processing_object_substrate,
-                processing_object_substrate_new
+            result_sim_po_char = Sim.compare_geometrical_characteristics(
+                processing_object_concrete,
+                processing_object_concrete_new
             )
             result[
-                ProcessingObject.PO.value + '.' + ProcessingObject.SUBSTRATE.value + '.' + Substrate.GEOM_CHARS.value
-            ] = result_sim_substrate_char.value
+                ProcessingObject.PO.value + '.' + SubstrateDetail.GEOM_CHARS.value
+            ] = result_sim_po_char.value
 
             # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
-
-        # Объект обработки Деталь
-        # TODO: Уточнить может ли быть одновременно и Подложка и деталь как объекты обработки
-        # Ответ: всегда один Подложка/Деталь
-        # processing_object_substrate = find_name_value(tz, ProcessingObject.SUBSTRATE)
-        # processing_object_substrate_new = find_name_value(tz_new, ProcessingObject.SUBSTRATE)
 
         # TODO: Материал для выполнения ТО
         # ...
@@ -159,8 +169,8 @@ class Sim:
                         stack.append(element)
             return names
 
-        el = find_meta_value(tz, Substrate.MATERIAL.value)
-        el_new = find_meta_value(tz_new, Substrate.MATERIAL.value)
+        el = find_meta_value(tz, SubstrateDetail.MATERIAL.value)
+        el_new = find_meta_value(tz_new, SubstrateDetail.MATERIAL.value)
 
         # default
         el, el_new = Sim.resolve_pass_tz(el, el_new)
@@ -202,8 +212,8 @@ class Sim:
                     return interval
             return None
 
-        el = find_meta_value(tz, Substrate.MASS.value)
-        el_new = find_meta_value(tz_new, Substrate.MASS.value)
+        el = find_meta_value(tz, SubstrateDetail.MASS.value)
+        el_new = find_meta_value(tz_new, SubstrateDetail.MASS.value)
 
         # default
         el, el_new = Sim.resolve_pass_tz(el, el_new)
