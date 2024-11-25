@@ -1,6 +1,7 @@
 from typing import Final
 
 from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
+from src.element_types.requirements_operation_result import RequirementsOperationResult
 from src.interval import Interval
 from src.path_utils import split_path, replace_path_last_part
 from src.element_types.material import Material
@@ -58,10 +59,14 @@ class Sim:
                 base = find_meta_value(processing_object_concrete, "Основа")
                 work_surface = find_meta_value(processing_object_concrete, "Рабочая поверхность")
                 # TODO
-                pass
+
+                result_sim_po_materials = Sim.compare_materials(
+                    base,
+                    base
+                )
 
             result[
-                ProcessingObject.PO.value + '.' + SubstrateDetail.MATERIAL.value
+                ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MATERIAL.normalize()
             ] = result_sim_po_materials.value
 
             # Подложка -> Масса
@@ -70,7 +75,7 @@ class Sim:
                 processing_object_concrete_new
             )
             result[
-                ProcessingObject.PO.value + '.' + SubstrateDetail.MASS.value
+                ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MASS.normalize()
             ] = result_sim_po_mass.value
 
             # Подложка -> Геометрические характеристики
@@ -79,7 +84,7 @@ class Sim:
                 processing_object_concrete_new
             )
             result[
-                ProcessingObject.PO.value + '.' + SubstrateDetail.GEOM_CHARS.value
+                ProcessingObject.PO.normalize() + '.' + SubstrateDetail.GEOM_CHARS.normalize()
             ] = result_sim_po_char.value
 
             # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
