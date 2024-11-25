@@ -23,6 +23,7 @@ class Sim:
     @staticmethod
     def compare(tz, tz_new):
         # TODO: ключами должны быть наименования или классы? К примеру, 'Объект обработки' или 'Подложка'?
+        # Ответ: Берём только 'Объект обработки' и он всегда один Подложка/Деталь
         result = dict()
         # Сравнение Объектов обработки
 
@@ -69,6 +70,7 @@ class Sim:
 
         # Объект обработки Деталь
         # TODO: Уточнить может ли быть одновременно и Подложка и деталь как объекты обработки
+        # Ответ: всегда один Подложка/Деталь
         # processing_object_substrate = find_name_value(tz, ProcessingObject.SUBSTRATE)
         # processing_object_substrate_new = find_name_value(tz_new, ProcessingObject.SUBSTRATE)
 
