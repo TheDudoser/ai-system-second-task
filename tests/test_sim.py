@@ -56,8 +56,8 @@ class TestSim(unittest.TestCase):
         self.assertEqual(Mark.ORANGE, Sim.compare_defects(tz, tz_orange))
 
     # materials
+    # У ДВО РАН нет примеров с аналогами на текущий момент...
     def test_material_in_analogues(self):
-        """У ДВО РАН нет примеров с аналогами на текущий момент..."""
         pass
 
     def test_materials_in_not_class(self):
@@ -111,3 +111,13 @@ class TestSim(unittest.TestCase):
         tz_value_300 = load_fixture("mass/tz_value_300.json")
 
         self.assertEqual(Mark.RED, Sim.compare_mass(tz_value_20, tz_value_300))
+
+    # Тут пока один тест, потому что в онтологии кучу всего нет...
+    def test_compare_metal_powder(self):
+        tz = load_fixture("metal_powders/default.json")
+        self.assertEqual(Mark.RED, Sim.compare_metal_powder(tz, tz))
+
+    # Нет тестов, потому что проволок просто не существует,
+    #   а мы тянем link и придумать своё я не могу из-за этого...
+    def test_compare_metal_wire(self):
+        pass

@@ -59,26 +59,46 @@ def find_name_value(data, name):
 
 
 def find_meta_value(data, meta):
-  """
-  Находит первый объект с заданным значением ключа "meta".
+    """
+    Находит первый объект с заданным значением ключа "meta".
 
-  Args:
-    data: Данные в формате словаря или списка.
-    meta: Искомое значение ключа "meta".
+    Args:
+      data: Данные в формате словаря или списка.
+      meta: Искомое значение ключа "meta".
 
-  Returns:
-    Словарь с найденным объектом или None, если объект не найден.
-  """
-  if isinstance(data, dict):
-    if 'meta' in data and data['meta'] == meta:
-      return data
-    for value in data.values():
-      result = find_meta_value(value, meta)
-      if result:
-        return result
-  elif isinstance(data, list):
-    for item in data:
-      result = find_meta_value(item, meta)
-      if result:
-        return result
-  return None
+    Returns:
+      Словарь с найденным объектом или None, если объект не найден.
+    """
+    if isinstance(data, dict):
+        if 'meta' in data and data['meta'] == meta:
+            return data
+        for value in data.values():
+            result = find_meta_value(value, meta)
+            if result:
+                return result
+    elif isinstance(data, list):
+        for item in data:
+            result = find_meta_value(item, meta)
+            if result:
+                return result
+    return None
+
+
+def extract_names_by_meta_iterative(data, meta) -> list[str]:
+    names = []
+    stack = [data]
+
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            if item.get('meta') == meta and 'successors' in item:
+                for successor in item['successors']:
+                    if isinstance(successor, dict) and 'name' in successor:
+                        names.append(successor['name'])
+            elif 'successors' in item:
+                for successor in item['successors']:
+                    stack.append(successor)
+        elif isinstance(item, list):
+            for element in item:
+                stack.append(element)
+    return names
