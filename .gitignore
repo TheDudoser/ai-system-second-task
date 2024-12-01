@@ -1,6 +1,3 @@
-# other
-.env.local
-
 # pycharm
 .idea
 
@@ -128,7 +125,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+.env.local
 .venv
 env/
 venv/
