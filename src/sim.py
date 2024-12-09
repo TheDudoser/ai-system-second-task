@@ -57,7 +57,7 @@ class Sim:
 
         # Объект обработки -> Подложка / Деталь
         # Может быть либо Подложка, либо Деталь, но есть нюанс в сравнении материалов для Детали
-        if find_meta_value(processing_object, ProcessingObject.SUBSTRATE.value):
+        if find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE.value):
             is_substrate = True
             processing_object_concrete = find_meta_value(processing_object, ProcessingObject.SUBSTRATE.value)
             processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE.value)
@@ -135,14 +135,14 @@ class Sim:
         material_for_maintenance = find_meta_value(tz, MaterialForMaintenance.MFM.value)
         material_for_maintenance_new = find_meta_value(tz_new, MaterialForMaintenance.MFM.value)
 
-        if find_meta_value(material_for_maintenance, MaterialForMaintenance.METAL_POWDER.value):
+        # Уточнял может ли быть оба (проволока и порошок), сказали всегда только 1
+        if find_meta_value(material_for_maintenance_new, MaterialForMaintenance.METAL_POWDER.value):
             is_metal_wire = False
             material_for_maintenance_concrete = find_meta_value(material_for_maintenance,
                                                                 MaterialForMaintenance.METAL_POWDER.value)
             material_for_maintenance_concrete_new = find_meta_value(material_for_maintenance_new,
                                                                     MaterialForMaintenance.METAL_POWDER.value)
         else:
-            # TODO: Вообще не увидел ситуации, когда была бы Металлическая проволока
             is_metal_wire = True
             material_for_maintenance_concrete = find_meta_value(material_for_maintenance,
                                                                 MaterialForMaintenance.METAL_WIRE.value)
@@ -159,7 +159,6 @@ class Sim:
 
             if result_mfm.value:
                 result[MaterialForMaintenance.MFM.normalize()] = result_mfm.value
-
         ###< Материал для выполнения ТО ###
 
         # TODO: Технологический газ
@@ -200,17 +199,6 @@ class Sim:
 
     @staticmethod
     def compare_geometrical_characteristics(tz, tz_new) -> Mark | None:
-        """
-         Takes 2 ТЗ and compares their geometric characteristics.
-
-         Args:
-         tz: Operation ТЗ (ethalon).
-         tz_new: new ТЗ.
-
-         Returns:
-         Mark.GREEN, if the sets of characteristics are identical in structure, otherwise Mark.RED.
-        """
-
         el = find_name_value(tz, Sim.GEOMETRICAL_CHARACTERISTICS_VALUE)
         el_new = find_name_value(tz_new, Sim.GEOMETRICAL_CHARACTERISTICS_VALUE)
 
@@ -509,12 +497,25 @@ class Sim:
         else:
             true_el, true_el_new = first_step_result
 
-        def compare_third_part_metal_powder(mp, mp_new) -> Mark:
+        def compare_third_part_metal_powder(mp, mp_new) -> Mark | None:
             # 3.
             # 3.1. Подобие сплавов = подобие материалов
-            # TODO: Не понимаю этот пункт, если мы до сюда дошли разве сплавы уже не подобны? (следует из 2го пункта)
-            #  Если нет, то как понимать подобие сплавов?
-            alloy_similarity = Mark.GREEN
+            # Хитрое вытаскивание, так как зачем-то в Материале существует ненужная вложенность
+            material = find_meta_value(mp, MetalPowder.MATERIAL.value)
+            material_new = find_meta_value(mp_new, MetalPowder.MATERIAL.value)
+
+            pass_result_material = Sim.resolve_pass_tz(material, material_new)
+            if not isinstance(pass_result_material, list):
+                # Если такая ситуация произошла, то у нас не полные данные
+                if pass_result_material is None:
+                    return None
+
+                alloy_similarity = pass_result_material
+            else:
+                material_sub = find_meta_value(material, MetalPowder.MATERIAL.value)
+                material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL.value)
+                alloy_similarity = Sim.compare_materials(material_sub, material_sub_new)
+            # Конец хитрого вытаскивания
 
             # 3.2. Подобие методов получения
             # TODO: Метод получения в онтологии не описан какой вид имеет (в примерах он с пустым содержанием)...
@@ -529,7 +530,7 @@ class Sim:
 
             # 3.3. Подобие размеров частиц
             # Объявленные интервалы этого пункта
-            # TODO: Не понятно влияет ли раскраска разными цветами, ведь если да, то она противоречит дальнейшим условиям
+            # Раскраска интервала разными цветами в постановке задачи не играет никакой роли
             intervals = [
                 Interval(0.0, 50.0),
                 Interval(50.0, 100.0),
@@ -543,8 +544,13 @@ class Sim:
 
             # Пропуск
             pass_result = Sim.resolve_pass_tz(particle_size, particle_size_new)
+            size_similarity = None
             if not isinstance(pass_result, list):
-                size_similarity = pass_result if isinstance(pass_result, Mark) else Mark.RED
+                # Если такая ситуация произошла, то у нас не полные данные
+                if pass_result is None:
+                    return None
+
+                size_similarity = pass_result
             else:
                 min_max_particle_size = find_meta_value(particle_size, MetalPowder.MIN_MAX_PARTICLE_SIZE.value)
                 min_max_particle_size_new = find_meta_value(particle_size_new, MetalPowder.MIN_MAX_PARTICLE_SIZE.value)
@@ -608,6 +614,10 @@ class Sim:
                         elif not interval.intersects(interval_new):
                             size_similarity = Mark.RED
 
+            # Если такая ситуация произошла, то у нас не полные данные
+            if size_similarity is None:
+                return None
+
             # Определение цвета по наименьшей похожести (Пункт 3)
             similarities = {
                 alloy_similarity.value,
@@ -638,16 +648,29 @@ class Sim:
 
             # 3.
             # 3.1. Подобие сплавов
-            # TODO: Не понимаю этот пункт, если мы до сюда дошли разве сплавы уже не подобны? (следует из 2го пункта)
-            #  Если нет, то как понимать подобие сплавов?
-            alloy_similarity = Mark.GREEN
+            # Хитрое вытаскивание, так как зачем-то в Материале существует вложенность
+            material = find_meta_value(mw, MetalPowder.MATERIAL.value)
+            material_new = find_meta_value(mw_new, MetalPowder.MATERIAL.value)
+
+            pass_result_material = Sim.resolve_pass_tz(material, material_new)
+            if not isinstance(pass_result_material, list):
+                # Если такая ситуация произошла, то у нас не полные данные
+                if pass_result_material is None:
+                    return None
+
+                alloy_similarity = pass_result_material
+            else:
+                material_sub = find_meta_value(material, MetalPowder.MATERIAL.value)
+                material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL.value)
+                alloy_similarity = Sim.compare_materials(material_sub, material_sub_new)
+            # Конец хитрого вытаскивания
 
             if not alloy_similarity:
                 return Mark.RED
             # 3.2. Подобие диаметров проволок
             else:
                 # Объявленные интервалы этого пункта
-                # TODO: Не понятно влияет ли раскраска разными цветами, ведь если да, то она противоречит дальнейшим условиям
+                # Раскраска интервала разными цветами в постановке задачи не играет никакой роли
                 intervals = [
                     Interval(0.0, 0.5),
                     Interval(0.5, 1.0),
@@ -656,7 +679,7 @@ class Sim:
                     Interval(2.0, sys.float_info.max)
                 ]
                 # Извлекаем значения диаметров
-                # TODO: Пришлось выдумать, так как нет данных откуда можно было бы их взять
+                # Структура Диаметра по своему виду напоминает Нижнюю/Верхнюю границу
                 diameter = find_meta_value(mw, 'Диаметр')
                 diameter_new = find_meta_value(mw_new, 'Диаметр')
 
@@ -665,8 +688,11 @@ class Sim:
                 if not isinstance(pass_result, list):
                     return pass_result
                 else:
-                    interval1 = get_diameter_interval(diameter['value'], intervals)
-                    interval2 = get_diameter_interval(diameter_new['value'], intervals)
+                    diameter_value_obj = find_meta_value(diameter, 'Числовое значение')
+                    diameter_new_value_obj = find_meta_value(diameter_new, 'Числовое значение')
+
+                    interval1 = get_diameter_interval(diameter_value_obj['value'], intervals)
+                    interval2 = get_diameter_interval(diameter_new_value_obj['value'], intervals)
                     # 3.2.1. Пара принадлежит одному и тому же интервалу
                     if interval1 == interval2:
                         return Mark.GREEN
