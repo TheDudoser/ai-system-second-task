@@ -135,7 +135,7 @@ class Sim:
         material_for_maintenance = find_meta_value(tz, MaterialForMaintenance.MFM.value)
         material_for_maintenance_new = find_meta_value(tz_new, MaterialForMaintenance.MFM.value)
 
-        # Уточнял может ли быть оба (проволока и порошок), сказали всегда только 1
+        # Уточнял "может ли быть оба" (проволока и порошок), сказали всегда только 1
         if find_meta_value(material_for_maintenance_new, MaterialForMaintenance.METAL_POWDER.value):
             is_metal_wire = False
             material_for_maintenance_concrete = find_meta_value(material_for_maintenance,
@@ -157,7 +157,7 @@ class Sim:
                 result_mfm = Sim.compare_metal_powder(material_for_maintenance_concrete,
                                                       material_for_maintenance_concrete_new)
 
-            if result_mfm.value:
+            if result_mfm:
                 result[MaterialForMaintenance.MFM.normalize()] = result_mfm.value
         ###< Материал для выполнения ТО ###
 
@@ -177,7 +177,7 @@ class Sim:
 
         ###< Технологические газы ###
 
-        # TODO: Требования к результату операции
+        ###> Требования к результату операции ###
         ror = find_meta_value(tz, RequirementsOperationResult.ROR.value)
         ror_new = find_meta_value(tz_new, RequirementsOperationResult.ROR.value)
 
@@ -191,9 +191,30 @@ class Sim:
                 result[
                     RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.GEOM_CHARS.normalize()
                     ] = result_sim_ror_char.value
-            # TODO: Требования к результату операции -> Дефекты наплавленного материала (уже есть - просто дефекты)
-            # TODO: Требования к результату операции -> Элементный состав (уже есть)
-            # В рамках нашей задачи не реализуем - Требования к результату операции -> Микроструктура
+
+            # Требования к результату операции -> Дефекты наплавленного материала
+            # Внутри "Дефекты наплавленного материала" лежат обычные дефекты
+            defects_deposited_material = find_meta_value(tz, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+            defects_deposited_material_new = find_meta_value(tz_new, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+
+            result_defects_pass = Sim.resolve_pass_tz(defects_deposited_material, defects_deposited_material_new)
+            if isinstance(result_defects_pass, Mark):
+                result[
+                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
+                    ] = result_defects_pass.value
+            elif isinstance(result_defects_pass, list):
+                result_sim_ror_defects = Sim.compare_defects(defects_deposited_material, defects_deposited_material_new)
+                if result_sim_ror_defects:
+                    result[
+                        RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
+                        ] = result_sim_ror_defects.value
+
+            # TODO: Требования к результату операции -> Элементный состав
+            # TODO: то есть в "Требования к результату операции" должен лежать материал, внутри которого "Элементный состав" или как?
+            #   В онтологии снова неполные данные где ссылка на структуру элементного состава (через link)
+
+            # В рамках нашей задачи не реализуем (написано в требованиях): Требования к результату операции -> Микроструктура
+        ###< Требования к результату операции ###
 
         return result
 
