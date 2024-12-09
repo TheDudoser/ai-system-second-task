@@ -2,6 +2,8 @@ import sys
 from typing import Final
 
 from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
+from src.element_types.elemental_composition import ElementalComposition
+from src.element_types.interval_type import IntervalType
 from src.element_types.material_for_maintenance import MaterialForMaintenance
 from src.element_types.metal_powder import MetalPowder
 from src.element_types.process_gas import ProcessGas
@@ -161,7 +163,8 @@ class Sim:
         ###< Материал для выполнения ТО ###
 
         # TODO: Технологический газ
-        # TODO: В онтологии этот элемент пустой (даже link нет)...
+        # В онтологии этот элемент пустой (даже link нет)...
+        # Для тестов можно брать Аргон/Гелий
         ###> Технологические газы ###
         pg = find_meta_value(tz, ProcessGas.PG.value)
         pg_new = find_meta_value(tz_new, ProcessGas.PG.value)
@@ -169,9 +172,9 @@ class Sim:
             pg, pg_new
         )
         # if isinstance(pass_mark, list):
-            # TODO: (Может можно не реализовывать если у них нет данных? Я так понимаю процесс заполнения не такой быстрый...)
-            #   Моногаз - нет нормальных примеров нигде (только "Газовая среда в рабочей камере", но это вообще другое...)
-            # TODO: (Может можно не реализовывать если у них нет данных?) Газовая смесь - Аналогично
+        # TODO: (Может можно не реализовывать если у них нет данных? Я так понимаю процесс заполнения не такой быстрый...)
+        #   Моногаз - нет нормальных примеров нигде (только "Газовая среда в рабочей камере", но это вообще другое...)
+        # TODO: (Может можно не реализовывать если у них нет данных?) Газовая смесь - Аналогично
 
         ###< Технологические газы ###
 
@@ -189,8 +192,8 @@ class Sim:
                 result[
                     RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.GEOM_CHARS.normalize()
                     ] = result_sim_ror_char.value
-            # TODO: Требования к результату операции -> Дефекты наплавленного материала
-            # TODO: Требования к результату операции -> Элементный состав (Когда сделает Матвей)
+            # TODO: Требования к результату операции -> Дефекты наплавленного материала (уже есть - просто дефекты)
+            # TODO: Требования к результату операции -> Элементный состав (уже есть)
             # В рамках нашей задачи не реализуем - Требования к результату операции -> Микроструктура
 
         return result
@@ -287,9 +290,112 @@ class Sim:
         if find_name_value(new_response_el, name_el_new) is None:
             return Mark.RED
 
-        # Подобие эл. составов
-        # TODO: Делает Матвей, временно возвращаю GREEN
-        return Mark.GREEN
+        # Подобие элементных составов
+        return Sim.elemental_composition_compare(true_el, true_el_new)
+
+    # Немного модифицированный метод по сравнению с sim_element_contains.ipynb
+    @staticmethod
+    def elemental_composition_compare(json1, json2):
+        osnov_1 = find_meta_value(json1, ElementalComposition.BASE.value)
+        osnov_2 = find_meta_value(json2, ElementalComposition.BASE.value)
+
+        values_1 = [item['value'] for item in osnov_1['successors']]
+        values_2 = [item['value'] for item in osnov_2['successors']]
+
+        if values_1 == values_2:
+            # default
+            pass_result = Sim.resolve_pass_tz(json1, json2)
+            if not isinstance(pass_result, list):
+                return pass_result
+            else:
+                pair_counter = 0  # счетчик пар
+                green_counter = 0  # счётчик зелёных пар
+
+                elemental_composition1 = find_meta_value(json1, ElementalComposition.EC.value)
+                elemental_composition2 = find_meta_value(json2, ElementalComposition.EC.value)
+
+                for component in elemental_composition1['successors']:
+                    if component['meta'] != ElementalComposition.COMPONENT.value:
+                        continue
+
+                    chim_element_1 = find_meta_value(component, ElementalComposition.CHIM_ELEMENT.value)
+
+                    if chim_element_1 is None or chim_element_1.get('name', None) is None:
+                        continue
+
+                    for component_2 in elemental_composition2['successors']:
+                        if component['meta'] != ElementalComposition.COMPONENT.value:
+                            continue
+
+                        chim_element_2 = find_name_value(component_2, chim_element_1['name'])
+
+                        if chim_element_2 is not None:
+                            pair_counter += 1
+
+                            number_interval_1 = find_meta_value(chim_element_1['successors'], IntervalType.NUM_INTERVAL.value)
+                            number_interval_2 = find_meta_value(chim_element_2['successors'], IntervalType.NUM_INTERVAL.value)
+
+                            not_bigger_1 = find_meta_value(chim_element_1, IntervalType.NOT_BIGGER.value)
+                            not_bigger_2 = find_meta_value(chim_element_2, IntervalType.NOT_BIGGER.value)
+
+                            # 3.1
+                            if number_interval_1 is not None and number_interval_2 is not None:
+                                low_border_1 = find_meta_value(number_interval_1, IntervalType.LOW_BORDER.value)
+                                top_border_1 = find_meta_value(number_interval_1, IntervalType.TOP_BORDER.value)
+
+                                interval_1 = Interval(
+                                    float(low_border_1['successors'][0]['value']),
+                                    float(top_border_1['successors'][0]['value'])
+                                )
+
+                                low_border_2 = find_meta_value(number_interval_2, IntervalType.LOW_BORDER.value)
+                                top_border_2 = find_meta_value(number_interval_2, IntervalType.TOP_BORDER.value)
+
+                                interval_2 = Interval(
+                                    float(low_border_2['successors'][0]['value']),
+                                    float(top_border_2['successors'][0]['value'])
+                                )
+
+                                if interval_1.contains_interval(interval_2):
+                                    green_counter += 1
+
+                            # 3.2
+                            elif ((not_bigger_1 is not None and number_interval_2 is not None)
+                                  or (not_bigger_2 is not None and number_interval_1 is not None)
+                            ):
+
+                                if not_bigger_1 is not None:
+                                    interval_value_1 = find_meta_value(not_bigger_1['successors'], 'Числовое значение')
+
+                                    interval_1 = Interval(0.0, float(interval_value_1['value']))
+
+                                    low_border_2 = find_meta_value(number_interval_2, IntervalType.LOW_BORDER.value)
+                                    top_border_2 = find_meta_value(number_interval_2, IntervalType.TOP_BORDER.value)
+
+                                    interval_2 = Interval(
+                                        float(low_border_2['successors'][0]['value']),
+                                        float(top_border_2['successors'][0]['value'])
+                                    )
+
+                                    if interval_1.contains_interval(interval_2):
+                                        green_counter += 1
+
+                            elif not_bigger_1 is not None and not_bigger_2 is not None:  # 3.3
+                                interval_value_2 = find_meta_value(chim_element_2['successors'], 'Числовое значение')
+                                interval_value_1 = find_meta_value(chim_element_1['successors'], 'Числовое значение')
+
+                                if interval_value_1 == interval_value_2:
+                                    green_counter += 1
+
+            if green_counter / pair_counter >= 0.9:
+                return Mark.GREEN
+            elif green_counter / pair_counter >= 0.7:
+                return Mark.ORANGE
+            else:
+                return Mark.RED
+
+        else:
+            return Mark.RED
 
     @staticmethod
     def compare_mass(tz, tz_new) -> Mark | None:
@@ -308,7 +414,7 @@ class Sim:
         if not isinstance(pass_result, list):
             return pass_result
 
-        # TODO: В онтологии почему-то бывают ситуации, когда нет Значения у массы...
+        # В онтологии почему-то бывают ситуации, когда нет Значения у массы...
         pass_mass_value = Sim.resolve_pass_tz(
             find_meta_value(el, 'Значение'),
             find_meta_value(el_new, 'Значение')
@@ -405,7 +511,7 @@ class Sim:
 
         def compare_third_part_metal_powder(mp, mp_new) -> Mark:
             # 3.
-            # 3.1. Подобие сплавов
+            # 3.1. Подобие сплавов = подобие материалов
             # TODO: Не понимаю этот пункт, если мы до сюда дошли разве сплавы уже не подобны? (следует из 2го пункта)
             #  Если нет, то как понимать подобие сплавов?
             alloy_similarity = Mark.GREEN
@@ -450,22 +556,22 @@ class Sim:
                 else:
                     # [a, b]
                     min_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size, 'Нижняя граница'),
+                        find_meta_value(min_max_particle_size, IntervalType.LOW_BORDER.value),
                         'Числовое значение'
                     )['value']
                     max_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size, 'Верхняя граница'),
+                        find_meta_value(min_max_particle_size, IntervalType.TOP_BORDER.value),
                         'Числовое значение'
                     )['value']
                     interval = Interval(min_particle_size, max_particle_size)
 
                     # [c, d]
                     min_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size_new, 'Нижняя граница'),
+                        find_meta_value(min_max_particle_size_new, IntervalType.LOW_BORDER.value),
                         'Числовое значение'
                     )['value']
                     max_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size_new, 'Верхняя граница'),
+                        find_meta_value(min_max_particle_size_new, IntervalType.TOP_BORDER.value),
                         'Числовое значение'
                     )['value']
                     interval_new = Interval(min_particle_size, max_particle_size)

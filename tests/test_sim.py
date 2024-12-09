@@ -5,7 +5,7 @@ from tests.utils import load_fixture
 
 
 class TestSim(unittest.TestCase):
-    # geometrical_characteristics
+    ###> geometrical_characteristics ###
     def test_green_compare_geometrical_characteristics(self):
         tz = load_fixture("geometrical_characteristics/tz.json")
         tz_green = load_fixture("geometrical_characteristics/tz_green.json")
@@ -29,8 +29,9 @@ class TestSim(unittest.TestCase):
         tz = load_fixture("geometrical_characteristics/tz.json")
         tz_pass = load_fixture("geometrical_characteristics/tz_pass.json")
         self.assertEqual(Mark.GREEN, Sim.compare_geometrical_characteristics(tz, tz_pass))
+    ###< geometrical_characteristics ###
 
-    # defects
+    ###> defects ###
     def test_green_compare_defects(self):
         tz = load_fixture("defects/tz.json")
         tz_green = load_fixture("defects/tz_green.json")
@@ -54,8 +55,9 @@ class TestSim(unittest.TestCase):
         tz = load_fixture("defects/tz.json")
         tz_orange = load_fixture("defects/tz_orange.json")
         self.assertEqual(Mark.ORANGE, Sim.compare_defects(tz, tz_orange))
+    ###< defects ###
 
-    # materials
+    ###> materials ###
     # У ДВО РАН нет примеров с аналогами на текущий момент...
     def test_material_in_analogues(self):
         pass
@@ -66,13 +68,16 @@ class TestSim(unittest.TestCase):
         self.assertEqual(Mark.RED, Sim.compare_materials(tz, tz_not_in_class))
 
     def test_materials_in_class(self):
-        # TODO: Ждём подобие эл. составов от Матвея
-        pass
+        tz = load_fixture("materials/tz.json")
+        print(Sim.compare_materials(tz, tz))
 
     def test_materials_detail(self):
+        # TODO: Наплавка на основе Олова, сказали что добавили рабочую поверхность
         # TODO: Уточнения требований от Вадима
         pass
+    ###< materials ###
 
+    ###> mass ###
     def test_mass_one_interval(self):
         # 1 пункт
         tz_first_interval = load_fixture("mass/tz_first_interval.json")
@@ -111,13 +116,31 @@ class TestSim(unittest.TestCase):
         tz_value_300 = load_fixture("mass/tz_value_300.json")
 
         self.assertEqual(Mark.RED, Sim.compare_mass(tz_value_20, tz_value_300))
+    ###< mass ###
 
+    ###> Подобие элементных составов ###
+    def test_elemental_composition_identical_compare(self):
+        tz = load_fixture("elemental_composition/St3sp.json")
+        self.assertEqual(Mark.GREEN, Sim.elemental_composition_compare(tz, tz))
+
+    # Одинаковая основа, разные элементы
+    def test_elemental_composition_not_identical_compare(self):
+        tz = load_fixture("elemental_composition/St3sp.json")
+        tz_new = load_fixture("elemental_composition/12X18H10T.json")
+        self.assertEqual(Mark.RED, Sim.elemental_composition_compare(tz, tz_new))
+    ###< Подобие элементных составов ###
+
+    ###> Металлический порошок ###
     # Тут пока один тест, потому что в онтологии кучу всего нет...
     def test_compare_metal_powder(self):
         tz = load_fixture("metal_powders/default.json")
         self.assertEqual(Mark.RED, Sim.compare_metal_powder(tz, tz))
+    ###< Металлический порошок ###
 
+    ###> Металлическая проволока ###
+    # TODO: Вроде по итогу можно что-то придумать
     # Нет тестов, потому что проволок просто не существует,
     #   а мы тянем link и придумать своё я не могу из-за этого...
     def test_compare_metal_wire(self):
         pass
+    ###< Металлическая проволока ###
