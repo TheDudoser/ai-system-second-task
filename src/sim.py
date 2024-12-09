@@ -194,8 +194,8 @@ class Sim:
 
             # Требования к результату операции -> Дефекты наплавленного материала
             # Внутри "Дефекты наплавленного материала" лежат обычные дефекты
-            defects_deposited_material = find_meta_value(tz, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
-            defects_deposited_material_new = find_meta_value(tz_new, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+            defects_deposited_material = find_meta_value(ror, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+            defects_deposited_material_new = find_meta_value(ror_new, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
 
             result_defects_pass = Sim.resolve_pass_tz(defects_deposited_material, defects_deposited_material_new)
             if isinstance(result_defects_pass, Mark):
@@ -209,9 +209,36 @@ class Sim:
                         RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
                         ] = result_sim_ror_defects.value
 
-            # TODO: Требования к результату операции -> Элементный состав
-            # TODO: то есть в "Требования к результату операции" должен лежать материал, внутри которого "Элементный состав" или как?
-            #   В онтологии снова неполные данные где ссылка на структуру элементного состава (через link)
+            # Требования к результату операции -> Элементный состав
+            # Имеем снова неполные данные, так что действуем по догадке
+            elemental_composition = find_meta_value(ror, RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
+            elemental_composition_new = find_meta_value(ror_new, RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
+
+            result_elemental_composition_pass = Sim.resolve_pass_tz(elemental_composition, elemental_composition_new)
+            if isinstance(result_elemental_composition_pass, Mark):
+                result[
+                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
+                    ] = result_elemental_composition_pass.value
+            elif isinstance(result_defects_pass, list):
+                # В онтологии снова неполные данные, где ссылка на структуру элементного состава,
+                #   поэтому страхуемся на такой случай и учитываем link
+                if 'link' in elemental_composition:
+                    path, start_target = split_path(elemental_composition['link'])
+                    response_el = get_without_download_from_repo(path, get_token_by_current_env_vars(), start_target)
+                    elemental_composition = find_name_value(response_el, elemental_composition['name'])
+
+                if 'link' in elemental_composition_new:
+                    path_new, new_start_target = split_path(elemental_composition_new['link'])
+                    new_response_el = get_without_download_from_repo(path_new, get_token_by_current_env_vars(),
+                                                                     new_start_target)
+                    elemental_composition_new = find_name_value(new_response_el, elemental_composition_new['name'])
+
+                result_elemental_composition = Sim.elemental_composition_compare(elemental_composition,
+                                                                                 elemental_composition_new)
+                if result_elemental_composition:
+                    result[
+                        RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
+                        ] = result_elemental_composition.value
 
             # В рамках нашей задачи не реализуем (написано в требованиях): Требования к результату операции -> Микроструктура
         ###< Требования к результату операции ###
