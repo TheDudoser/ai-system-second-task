@@ -58,6 +58,35 @@ def find_name_value(data, name):
     return None
 
 
+def find_name_value_endswith(data, name_pattern):
+    """
+    Finds an object where the 'name' key matches a given ends str.
+
+    Args:
+        data: Data in dictionary format.
+        name_pattern: The regular expression pattern to search for.
+
+    Returns:
+        A dictionary with the found object or None if not found.
+    """
+
+    if 'name' in data and data['name'].endswith(name_pattern):
+        return data
+
+    for item in data.values():
+        if isinstance(item, dict):
+            result = find_name_value_endswith(item, name_pattern)
+            if result:
+                return result
+        elif isinstance(item, list):
+            for sub_item in item:
+                result = find_name_value_endswith(sub_item, name_pattern)
+                if result:
+                    return result
+
+    return None
+
+
 def find_meta_value(data, meta):
     """
     Находит первый объект с заданным значением ключа "meta".

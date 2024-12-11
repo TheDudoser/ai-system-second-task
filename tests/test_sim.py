@@ -143,3 +143,46 @@ class TestSim(unittest.TestCase):
     def test_compare_metal_wire(self):
         pass
     ###< Металлическая проволока ###
+
+    ###> Моногаз ###
+    def test_compare_identical_monogas(self):
+        tz = load_fixture("monogas/default.json")
+        self.assertEqual(Mark.GREEN, Sim.compare_monogas(tz, tz))
+
+    # Разные названия газов
+    def test_compare_other_monogas(self):
+        tz = load_fixture("monogas/default.json")
+        tz_new = load_fixture("monogas/other_gas_without_sort_marka.json")
+        self.assertEqual(Mark.RED, Sim.compare_monogas(tz, tz_new))
+
+    # Марки одинаковые
+    def test_compare_without_sort_monogas(self):
+        tz = load_fixture("monogas/default.json")
+        tz_new = load_fixture("monogas/without_sort.json")
+        self.assertEqual(Mark.GREEN, Sim.compare_monogas(tz, tz_new))
+
+    # Сорты одинаковые
+    def test_compare_without_marka_monogas(self):
+        tz = load_fixture("monogas/default.json")
+        tz_new = load_fixture("monogas/without_marka.json")
+        self.assertEqual(Mark.GREEN, Sim.compare_monogas(tz, tz_new))
+
+    # Разные марки
+    def test_compare_with_other_marka_monogas(self):
+        tz = load_fixture("monogas/default.json")
+        tz_new = load_fixture("monogas/default_with_other_marka.json")
+        self.assertEqual(Mark.ORANGE, Sim.compare_monogas(tz, tz_new))
+
+    # Разные сорты
+    def test_compare_with_other_sort_monogas(self):
+        tz = load_fixture("monogas/default.json")
+        tz_new = load_fixture("monogas/default_with_other_sort.json")
+        self.assertEqual(Mark.ORANGE, Sim.compare_monogas(tz, tz_new))
+
+    ###< Моногаз ###
+
+    ###> Газовая смесь ###
+    def test_compare_gas_mixture(self):
+        pass
+        # todo
+    ###< Газовая смесь ###

@@ -13,7 +13,8 @@ from src.path_utils import split_path, replace_path_last_part
 from src.element_types.material import Material
 from src.element_types.processing_object import ProcessingObject
 from src.element_types.substrate_detail import SubstrateDetail
-from src.extract_element_utils import find_name_value, find_meta_value, extract_names_by_meta_iterative
+from src.extract_element_utils import find_name_value, find_meta_value, extract_names_by_meta_iterative, \
+    find_name_value_endswith
 from src.mark import Mark
 
 
@@ -161,19 +162,38 @@ class Sim:
                 result[MaterialForMaintenance.MFM.normalize()] = result_mfm.value
         ###< Материал для выполнения ТО ###
 
-        # TODO: Технологический газ
-        # В онтологии этот элемент пустой (даже link нет)...
-        # Для тестов можно брать Аргон/Гелий
         ###> Технологические газы ###
+        # В онтологии этот элемент пустой (даже link нет)...
         pg = find_meta_value(tz, ProcessGas.PG.value)
         pg_new = find_meta_value(tz_new, ProcessGas.PG.value)
         pass_mark = Sim.resolve_pass_tz(
             pg, pg_new
         )
-        # if isinstance(pass_mark, list):
-        # TODO: (Может можно не реализовывать если у них нет данных? Я так понимаю процесс заполнения не такой быстрый...)
-        #   Моногаз - нет нормальных примеров нигде (только "Газовая среда в рабочей камере", но это вообще другое...)
-        # TODO: (Может можно не реализовывать если у них нет данных?) Газовая смесь - Аналогично
+        if isinstance(pass_mark, list):
+            # Технологические газы -> Моногаз
+            # В "Онтология архива протоколов технологических операций лазерной обработки" есть "Наполняющий газ",
+            #   который по идеи и есть моногаз, поэтому предположил, что оно должно приходить нам примерно в таком виде...
+            # Чтобы точно не облажаться, берём окончание названия, причём у первого successors. Это костыль, но данных то нет, делать больше нечего...
+            monogas_parent = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS.value)
+            monogas_parent_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS.value)
+
+            # Для газовых смесей аналогично, как и с моногазом костыли на костылях из-за отсутствия данных...
+            # TODO: Возможно, немного переделать нужно будет
+            gas_mixture = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS_MIXTURE.value)
+            gas_mixture_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS_MIXTURE.value)
+
+            # Судя по выводу, у нас может быть либо Моногаз, либо Газовая смесь
+            if monogas_parent is not None and monogas_parent_new is not None:
+                monogas = find_meta_value(monogas_parent, ProcessGas.GAS.value.capitalize())
+                monogas_new = find_meta_value(monogas_parent_new, ProcessGas.GAS.value.capitalize())
+
+                result_compare_monogas = Sim.compare_monogas(monogas, monogas_new)
+                if result_compare_monogas:
+                    result[ProcessGas.PG.value] = result_compare_monogas.value
+            elif gas_mixture is not None and gas_mixture_new is not None:
+                    result_compare_gas_mixture = Sim.compare_gas_mixture(gas_mixture, gas_mixture_new)
+                    if result_compare_gas_mixture:
+                        result[ProcessGas.PG.value] = result_compare_gas_mixture.value
 
         ###< Технологические газы ###
 
@@ -194,8 +214,10 @@ class Sim:
 
             # Требования к результату операции -> Дефекты наплавленного материала
             # Внутри "Дефекты наплавленного материала" лежат обычные дефекты
-            defects_deposited_material = find_meta_value(ror, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
-            defects_deposited_material_new = find_meta_value(ror_new, RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+            defects_deposited_material = find_meta_value(ror,
+                                                         RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+            defects_deposited_material_new = find_meta_value(ror_new,
+                                                             RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
 
             result_defects_pass = Sim.resolve_pass_tz(defects_deposited_material, defects_deposited_material_new)
             if isinstance(result_defects_pass, Mark):
@@ -212,7 +234,8 @@ class Sim:
             # Требования к результату операции -> Элементный состав
             # Имеем снова неполные данные, так что действуем по догадке
             elemental_composition = find_meta_value(ror, RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
-            elemental_composition_new = find_meta_value(ror_new, RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
+            elemental_composition_new = find_meta_value(ror_new,
+                                                        RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
 
             result_elemental_composition_pass = Sim.resolve_pass_tz(elemental_composition, elemental_composition_new)
             if isinstance(result_elemental_composition_pass, Mark):
@@ -368,8 +391,10 @@ class Sim:
                         if chim_element_2 is not None:
                             pair_counter += 1
 
-                            number_interval_1 = find_meta_value(chim_element_1['successors'], IntervalType.NUM_INTERVAL.value)
-                            number_interval_2 = find_meta_value(chim_element_2['successors'], IntervalType.NUM_INTERVAL.value)
+                            number_interval_1 = find_meta_value(chim_element_1['successors'],
+                                                                IntervalType.NUM_INTERVAL.value)
+                            number_interval_2 = find_meta_value(chim_element_2['successors'],
+                                                                IntervalType.NUM_INTERVAL.value)
 
                             not_bigger_1 = find_meta_value(chim_element_1, IntervalType.NOT_BIGGER.value)
                             not_bigger_2 = find_meta_value(chim_element_2, IntervalType.NOT_BIGGER.value)
@@ -752,3 +777,75 @@ class Sim:
                         return Mark.RED
 
         return compare_third_part_metal_wire(true_el, true_el_new)
+
+    @staticmethod
+    def compare_monogas(json1, json2) -> Mark | None:
+        gas_class1 = find_meta_value(json1, "Класс газов")
+        gas_class2 = find_meta_value(json2, "Класс газов")
+
+        if not isinstance(Sim.resolve_pass_tz(json1, json2), list):
+            return Sim.resolve_pass_tz(json1, json2)
+
+        # 1. у газов разные классы
+        if gas_class1["name"] != gas_class2["name"]:
+            return Mark.RED
+        else:
+            gas_name1 = find_meta_value(gas_class1, 'Газ')
+            gas_name2 = find_meta_value(gas_class2, 'Газ')
+
+            # 2. у газов не одинаковые имена
+            if gas_name1["name"] != gas_name2["name"]:
+                return Mark.RED
+            # 3. Имеют одинаковые названия
+            else:
+                gas_sort1 = find_meta_value(gas_name1, 'Сорт')
+                gas_sort2 = find_meta_value(gas_name2, 'Сорт')
+
+                gas_mark1 = find_meta_value(gas_name1, 'Марка')
+                gas_mark2 = find_meta_value(gas_name2, 'Марка')
+
+                # 3.1 Есть и сорт и марка
+                if gas_sort1 is not None and gas_sort2 is not None and gas_mark1 is not None and gas_mark2 is not None:
+                    # 3.1.1
+                    if gas_sort1 == gas_sort2 and gas_mark1 == gas_mark2:
+                        return Mark.GREEN
+                    # 3.1.2
+                    else:
+                        return Mark.ORANGE
+                # 3.2 Есть неполный набор о сорте и марке газов
+                else:
+                    # 3.2.1
+                    # есть сорт газов
+                    if gas_sort1 is not None and gas_sort2 is not None:
+                        if gas_sort1 == gas_sort2:
+                            return Mark.GREEN
+                        else:
+                            return Mark.ORANGE
+
+                    # есть марки газа
+                    elif gas_mark1 is not None and gas_mark2 is not None:
+                        if gas_mark1 == gas_mark2:
+                            return Mark.GREEN
+                        else:
+                            return Mark.ORANGE
+
+                    # 3.2.2.если данные в разных пармаетрах
+                    elif (gas_sort1 and gas_mark2) or (gas_mark1 and gas_sort2):
+                        return Mark.ORANGE
+                    # 3.3
+                    elif (gas_sort1 and gas_mark1) is not None != (gas_sort2 and gas_mark2) is not None:
+                        if gas_sort1 == gas_sort2 or gas_mark1 == gas_mark2:
+                            return Mark.GREEN
+                        else:
+                            return Mark.ORANGE
+                    # 3.4 Если для одного из моногазов не указаны его сорт и марка, а для другого указаны, то пара отмечается как оранжевая.
+                    elif ((gas_sort1 and gas_mark1) is not None) != ((gas_sort2 and gas_mark2) is not None):
+                        return Mark.ORANGE
+                    # 3.5. Если ни для одного из моногазов не указаны их сорт и марка, то пара отмечается как зелёная.
+                    else:
+                        return Mark.GREEN
+
+    @staticmethod
+    def compare_gas_mixture(json1, json2) -> Mark | None:
+        # todo
+        pass
