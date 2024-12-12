@@ -270,6 +270,25 @@ class Sim:
 
     @staticmethod
     def compare_geometrical_characteristics(tz, tz_new) -> Mark | None:
+        def compare_subtree(subtree1, subtree2):
+            if isinstance(subtree1, dict) and isinstance(subtree2, dict):
+                if subtree1.keys() != subtree2.keys():
+                    return False
+                for key in subtree1:
+                    if key != "id":
+                        if not compare_subtree(subtree1[key], subtree2[key]):
+                            return False
+                return True
+            elif isinstance(subtree1, list) and isinstance(subtree2, list):
+                if len(subtree1) != len(subtree2):
+                    return False
+                for i in range(len(subtree1)):
+                    if not compare_subtree(subtree1[i], subtree2[i]):
+                        return False
+                return True
+            else:
+                return subtree1 == subtree2
+
         el = find_name_value(tz, Sim.GEOMETRICAL_CHARACTERISTICS_VALUE)
         el_new = find_name_value(tz_new, Sim.GEOMETRICAL_CHARACTERISTICS_VALUE)
 
@@ -278,10 +297,7 @@ class Sim:
         if not isinstance(pass_result, list):
             return pass_result
 
-        names1 = [item['name'] for item in el['successors']]
-        names2 = [item['name'] for item in el_new['successors']]
-
-        if set(names1) == set(names2):
+        if compare_subtree(el['successors'], el_new['successors']):
             return Mark.GREEN
         else:
             return Mark.RED

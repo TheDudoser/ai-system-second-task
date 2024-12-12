@@ -8,8 +8,8 @@ class TestSim(unittest.TestCase):
     ###> geometrical_characteristics ###
     def test_green_compare_geometrical_characteristics(self):
         tz = load_fixture("geometrical_characteristics/tz.json")
-        tz_green = load_fixture("geometrical_characteristics/tz_green.json")
-        self.assertEqual(Mark.GREEN, Sim.compare_geometrical_characteristics(tz, tz_green))
+        tz_other_name_in_subtree = load_fixture("geometrical_characteristics/tz_other_name_in_subtree.json")
+        self.assertEqual(Mark.RED, Sim.compare_geometrical_characteristics(tz, tz_other_name_in_subtree))
 
     def test_eq_compare_geometrical_characteristics(self):
         tz = load_fixture("geometrical_characteristics/tz.json")
