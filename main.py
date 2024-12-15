@@ -7,11 +7,11 @@ import typer
 app = typer.Typer()
 
 @app.command()
-def run_comparison(path: str, new_case_path: str, save_result: bool = False):
+def run_comparison(path: str, new_case_path: str, name: str, save_result: bool = False):
     base = get_without_download_from_repo(path, get_token_by_current_env_vars())
     new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
     key1 = "name"
-    value1 = "Для целей тестирования"
+    value1 = name
     key2 = "name"
     value2 = "Техническое задание на выполнение технологической операции"
 
@@ -33,19 +33,3 @@ def run_comparison(path: str, new_case_path: str, save_result: bool = False):
 
 if __name__ == "__main__":
     app()
-
-    # TODO: cli with 2 params: "ontology" path and "new case" path
-    # path = "Загрузки / Онтология архива протоколов технологических операций лазерной обработки"
-
-    # test_data = get_without_download_from_repo(path, get_token_by_current_env_vars())
-
-    # # TEST
-    # key1 = "name"
-    # value1 = "Для целей тестирования"
-    # key2 = "name"
-    # value2 = "Техническое задание на выполнение технологической операции"
-
-    # # Search for the element containing both key-value pairs
-    # result = find_nested_element(test_data, key1, value1, key2, value2)
-
-    # print(Sim.compare(result, result))
