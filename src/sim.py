@@ -179,8 +179,8 @@ class Sim:
 
             # Для газовых смесей аналогично, как и с моногазом костыли на костылях из-за отсутствия данных...
             # TODO: Возможно, немного переделать нужно будет
-            gas_mixture = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS_MIXTURE.value)
-            gas_mixture_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS_MIXTURE.value)
+            gas_mixture_parent = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS_MIXTURE.value)
+            gas_mixture_parent_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS_MIXTURE.value)
 
             # Судя по выводу, у нас может быть либо Моногаз, либо Газовая смесь
             if monogas_parent is not None and monogas_parent_new is not None:
@@ -190,10 +190,13 @@ class Sim:
                 result_compare_monogas = Sim.compare_monogas(monogas, monogas_new)
                 if result_compare_monogas:
                     result[ProcessGas.PG.value] = result_compare_monogas.value
-            elif gas_mixture is not None and gas_mixture_new is not None:
-                    result_compare_gas_mixture = Sim.compare_gas_mixture(gas_mixture, gas_mixture_new)
-                    if result_compare_gas_mixture:
-                        result[ProcessGas.PG.value] = result_compare_gas_mixture.value
+            elif gas_mixture_parent is not None and gas_mixture_parent_new is not None:
+                gas_mixture = find_meta_value(monogas_parent, ProcessGas.GAS_MIXTURE.value.capitalize())
+                gas_mixture_new = find_meta_value(monogas_parent_new, ProcessGas.GAS_MIXTURE.value.capitalize())
+
+                result_compare_gas_mixture = Sim.compare_gas_mixture(gas_mixture, gas_mixture_new)
+                if result_compare_gas_mixture:
+                    result[ProcessGas.PG.value] = result_compare_gas_mixture.value
 
         ###< Технологические газы ###
 
