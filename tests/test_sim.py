@@ -182,7 +182,7 @@ class TestSim(unittest.TestCase):
     ###< Моногаз ###
 
     ###> Газовая смесь ###
-    def test_compare_gas_mixture(self):
-        pass
-        # todo
+    def test_compare_base_test_gas_mixture(self):
+        tz = load_fixture("mixture_gas/default_on_place.json")
+        self.assertEqual(Mark.GREEN, Sim.compare_gas_mixture(tz, tz))
     ###< Газовая смесь ###

@@ -1,4 +1,5 @@
 import sys
+from collections import Counter
 from typing import Final
 
 from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
@@ -19,7 +20,6 @@ from src.mark import Mark
 
 
 class Sim:
-    # TODO: Надо бы куда-то вынести константу
     GEOMETRICAL_CHARACTERISTICS_VALUE: Final = 'Геометрические характеристики'
 
     # про пропуски
@@ -866,5 +866,56 @@ class Sim:
 
     @staticmethod
     def compare_gas_mixture(json1, json2) -> Mark | None:
-        # todo
-        pass
+        # Сравнение готовых смесей
+        if "link" in json1["successors"][0]:
+            gasmix_name_1 = json1["successors"][0]["name"]
+            gasmix_name_2 = json2["successors"][0]["name"]
+            if gasmix_name_1 == gasmix_name_2:
+                return Mark.GREEN
+            else:
+                return Mark.RED
+
+        # Приготовление смесей на месте
+
+        # Посчитать сколько газов в газовой смеси
+        gasmix_el_comp_1 = find_meta_value(json1, "Соотношение компонентов газовой смеси")
+        elements_names_1 = [item["successors"][0]["name"] for item in gasmix_el_comp_1['successors']]
+
+        # массив для результатов сравнений
+        color_results = []
+
+        gasmix_el_comp_2 = find_meta_value(json2, "Соотношение компонентов газовой смеси")
+        elements_names_2 = [item["successors"][0]["name"] for item in gasmix_el_comp_2['successors']]
+
+        # 1. Для каждого газа из смеси1 должен найтись такой же в смеси2
+
+        if set(elements_names_1) != set(elements_names_2):
+            return Mark.RED
+
+        # 3. Процентное содержание (объемная доля) соответствующих моногазов
+        for element in gasmix_el_comp_1["successors"]:
+            for element2 in gasmix_el_comp_2["successors"]:
+                gas_1 = find_meta_value(element, "Газ")
+                gas_name_1 = gas_1["name"]
+                gas_2 = find_name_value(element2, gas_name_1)
+                if gas_2 is None:
+                    continue
+                gas_name_2 = gas_2["name"]
+
+                if gas_name_1 == gas_name_2:
+                    concentrat_1 = find_meta_value(element, "Концентрация")
+                    concentrat_1 = concentrat_1["successors"][0]["value"]
+
+                    concentrat_2 = find_meta_value(element2, "Концентрация")
+                    concentrat_2 = concentrat_2["successors"][0]["value"]
+
+                    if abs(concentrat_1 - concentrat_2) < 10:
+                        color_results.append(Mark.GREEN)
+                    elif abs(concentrat_1 - concentrat_2) < 30:
+                        color_results.append(Mark.ORANGE)
+                    else:
+                        color_results.append(Mark.RED)
+
+        c = Counter(color_results)
+
+        return c.most_common(1)[0][0]
