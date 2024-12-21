@@ -1,13 +1,33 @@
 import json
-from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars, download_from_repo
+from typing import Annotated
+
+from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
 from src.extract_element_utils import find_nested_element
 from src.sim import Sim
 import typer
 
 app = typer.Typer()
 
+
 @app.command()
-def run_comparison(path: str, new_case_path: str, name: str, save_result: bool = False):
+def run_comparison(
+        path: Annotated[
+            str,
+            typer.Argument(help="path онтологии"),
+        ],
+        new_case_path: Annotated[
+            str,
+            typer.Argument(help="path нового случая"),
+        ],
+        name: Annotated[
+            str,
+            typer.Argument(help="Название технологического задания"),
+        ],
+        save_result: Annotated[
+            bool,
+            typer.Option(help="Название технологического задания"),
+        ] = False,
+):
     base = get_without_download_from_repo(path, get_token_by_current_env_vars())
     new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
     key1 = "name"
@@ -27,8 +47,6 @@ def run_comparison(path: str, new_case_path: str, name: str, save_result: bool =
             print(result)
     else:
         print(result)
-
-
 
 
 if __name__ == "__main__":
