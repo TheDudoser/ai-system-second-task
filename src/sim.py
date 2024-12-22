@@ -245,7 +245,7 @@ class Sim:
                 result[
                     RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
                     ] = result_elemental_composition_pass.value
-            elif isinstance(result_defects_pass, list):
+            elif isinstance(result_elemental_composition_pass, list):
                 # В онтологии снова неполные данные, где ссылка на структуру элементного состава,
                 #   поэтому страхуемся на такой случай и учитываем link
                 if 'link' in elemental_composition:
