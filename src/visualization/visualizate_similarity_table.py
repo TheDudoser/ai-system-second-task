@@ -1,4 +1,9 @@
 
+def get_percent_similarity(*, operation_name, similarity_table) -> str:
+    finded_data = next((entry for entry in similarity_table if entry.get("TO_name") == operation_name), None)
+    return finded_data.get("data").get("%d1")
+
+
 def _get_color(*, similarity_table, full_path, top_key) -> str:
     # Найти запись с соответствующим TO_name
     finded_data = next((entry for entry in similarity_table if entry.get("TO_name") == top_key), None)
@@ -110,7 +115,7 @@ p {
 
     # Генерация контента для каждого ключа в operation_dict
     for operation_name, operation_data in operation_dict.items():
-        html += f"<details>\n<summary>{operation_name}</summary>\n"
+        html += f"<details>\n<summary>{operation_name} ({get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)}%)</summary>\n"
         # Путь для первого уровня — это значение из meta
         html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0)  # Начальный путь = ключ (meta)
         html += "</details>\n"
