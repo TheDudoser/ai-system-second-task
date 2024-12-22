@@ -1,5 +1,4 @@
 import copy
-from idlelib.run import Executive
 
 from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
 from src.path_utils import split_path
