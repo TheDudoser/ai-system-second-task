@@ -2,7 +2,7 @@ import json
 from typing import Annotated
 
 from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
-from src.extract_element_utils import find_nested_element, find_name_value, find_meta_value
+from src.extract_element_utils import find_meta_value, find_nested_element
 from src.similarity_table.similarity_table import process_similarity_tables
 from src.visualization.visualizate_similarity_table import visualize_data
 from src.services.replace_links import replace_links_to_dict
@@ -45,13 +45,14 @@ def run_comparison(
             typer.Option(help="Название технологического задания"),
         ] = False,
 ):
+    new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
+    new_case_path_to_name = path.split('/')[-1]
+
     base = get_without_download_from_repo(
         path,
         get_token_by_current_env_vars()
     )
     base_operations = extract_operations_with_meta(base, 'Технологическая операция')
-
-    new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
 
     result = []
     operation_with_links_dict = {}
@@ -62,7 +63,7 @@ def run_comparison(
 
         operation_with_links_dict[operation.get("name")] = operation_tz
 
-        tz_new_case = find_meta_value(new_case, tz_meta)
+        tz_new_case = find_nested_element(new_case, 'name', new_case_path_to_name, 'name', tz_meta)
 
         data = Sim.compare(operation_tz, tz_new_case)
         result.append({
