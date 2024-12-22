@@ -606,7 +606,7 @@ class Sim:
             else:
                 material_sub = find_meta_value(material, MetalPowder.MATERIAL.value)
                 material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL.value)
-                alloy_similarity = Sim.compare_materials(material_sub, material_sub_new)
+                alloy_similarity = Sim.compare_materials(material_sub['successors'], material_sub_new['successors'])
             # Конец хитрого вытаскивания
 
             # 3.2. Подобие методов получения
