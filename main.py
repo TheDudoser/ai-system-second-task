@@ -76,6 +76,18 @@ def run_comparison(
     if result:
         similarity_table = process_similarity_tables(input_data=result)
 
+        # Запись данных в JSON с сохранением структуры
+        with open('result.json', 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=4)
+
+        # Запись данных в JSON с сохранением структуры
+        with open('similarity_table.json', 'w', encoding='utf-8') as f:
+            json.dump(similarity_table, f, ensure_ascii=False, indent=4)
+
+        # Запись данных в JSON с сохранением структуры
+        with open('operation_with_links_dict.json', 'w', encoding='utf-8') as f:
+            json.dump(operation_with_links_dict, f, ensure_ascii=False, indent=4)
+
         similarity_table_cropped, operation_dict_cropped = filter_by_d1_and_get_matching_objects(similarity_table=similarity_table, operation_dict=operation_with_links_dict)
 
         operation_dict = replace_links_to_dict(operation_dict_with_links=operation_dict_cropped)
