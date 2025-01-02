@@ -32,27 +32,35 @@ def extract_operations_with_meta(data, target_meta):
 
 @app.command()
 def run_comparison(
-        path: Annotated[
-            str,
-            typer.Argument(help="path базы ТО"),
-        ],
-        new_case_path: Annotated[
-            str,
-            typer.Argument(help="path нового случая"),
-        ],
-        save_result: Annotated[
-            bool,
-            typer.Option(help="Название технологического задания"),
-        ] = False,
+    path: Annotated[
+        str,
+        typer.Argument(help="path базы ТО"),
+    ],
+    new_case_path: Annotated[
+        str,
+        typer.Argument(help="path нового случая"),
+    ],
+    use_api: Annotated[
+        bool,
+        typer.Option(help="Use API to load data"),
+    ] = True,
+    save_result: Annotated[
+        bool,
+        typer.Option(help="Название технологического задания"),
+    ] = False,
 ):
-    new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
-    new_case_path_to_name = path.split('/')[-1]
+    if use_api:
+        new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
+        base = get_without_download_from_repo(path, get_token_by_current_env_vars())
+    else:
+        with open(new_case_path, "r", encoding="utf-8") as f:
+            new_case = json.load(f)
+        with open(path, "r", encoding="utf-8") as f:
+            base = json.load(f)
 
-    base = get_without_download_from_repo(
-        path,
-        get_token_by_current_env_vars()
-    )
-    base_operations = extract_operations_with_meta(base, 'Технологическая операция')
+    new_case_path_to_name = path.split("/")[-1]
+
+    base_operations = extract_operations_with_meta(base, "Технологическая операция")
 
     result = []
     operation_with_links_dict = {}
@@ -63,38 +71,33 @@ def run_comparison(
 
         operation_with_links_dict[operation.get("name")] = operation_tz
 
-        tz_new_case = find_nested_element(new_case, 'name', new_case_path_to_name, 'name', tz_meta)
+        tz_new_case = find_nested_element(new_case, "name", new_case_path_to_name, "name", tz_meta)
 
         data = Sim.compare(operation_tz, tz_new_case)
-        result.append({
-            "TO_name": operation.get("name"),
-            "data": data
-        })
-
-
+        result.append({"TO_name": operation.get("name"), "data": data})
 
     if result:
         similarity_table = process_similarity_tables(input_data=result)
 
         # Запись данных в JSON с сохранением структуры
-        with open('result.json', 'w', encoding='utf-8') as f:
+        with open("result.json", "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=4)
 
         # Запись данных в JSON с сохранением структуры
-        with open('similarity_table.json', 'w', encoding='utf-8') as f:
+        with open("similarity_table.json", "w", encoding="utf-8") as f:
             json.dump(similarity_table, f, ensure_ascii=False, indent=4)
 
         # Запись данных в JSON с сохранением структуры
-        with open('operation_with_links_dict.json', 'w', encoding='utf-8') as f:
+        with open("operation_with_links_dict.json", "w", encoding="utf-8") as f:
             json.dump(operation_with_links_dict, f, ensure_ascii=False, indent=4)
 
-        similarity_table_cropped, operation_dict_cropped = filter_by_d1_and_get_matching_objects(similarity_table=similarity_table, operation_dict=operation_with_links_dict)
+        similarity_table_cropped, operation_dict_cropped = filter_by_d1_and_get_matching_objects(
+            similarity_table=similarity_table, operation_dict=operation_with_links_dict
+        )
 
         operation_dict = replace_links_to_dict(operation_dict_with_links=operation_dict_cropped)
 
         visualize_data(similarity_table=similarity_table_cropped, operation_dict=operation_dict)
-
-
 
     if save_result:
         with open("result.json", "w") as f:
@@ -103,8 +106,6 @@ def run_comparison(
             print(result)
     else:
         print(result)
-
-
 
 
 if __name__ == "__main__":
