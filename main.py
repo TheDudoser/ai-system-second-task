@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Annotated
 
 from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
@@ -30,28 +31,36 @@ def extract_operations_with_meta(data, target_meta):
     return operations
 
 
-@app.command()
+@app.command(help="Выполнение полного цикла заданий: сравнение ТЗ, KNN, визуализация результата")
 def run_comparison(
     path: Annotated[
         str,
-        typer.Argument(help="path базы ТО"),
+        typer.Argument(
+            help="path базы ТО. Если указан аргумент --use-api, ссылка вводится в формате 'Загрузки / Архив / ТО', иначе путь до файла"
+        ),
     ],
     new_case_path: Annotated[
         str,
-        typer.Argument(help="path нового случая"),
+        typer.Argument(
+            help="path нового случая. Если указан аргумент --use-api, ссылка вводится в формате 'Загрузки / Архив / ТЗ', иначе путь до файла"
+        ),
     ],
     use_api: Annotated[
         bool,
-        typer.Option(help="Use API to load data"),
+        typer.Option(help="Использовать API для загрузки данных?"),
     ] = True,
-    save_result: Annotated[
-        bool,
-        typer.Option(help="Название технологического задания"),
-    ] = False,
 ):
     if use_api:
+        print("Получение данных с API...")
+        start_time = time.time()
+
         new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
         base = get_without_download_from_repo(path, get_token_by_current_env_vars())
+
+        end_time = time.time()
+        total_time = end_time - start_time
+        print("Данные с API получены. Время обращения к API: {total_time}сек.".format(total_time=round(total_time)))
+        print()
     else:
         with open(new_case_path, "r", encoding="utf-8") as f:
             new_case = json.load(f)
@@ -59,33 +68,49 @@ def run_comparison(
             base = json.load(f)
 
     new_case_path_to_name = path.split("/")[-1]
-
     base_operations = extract_operations_with_meta(base, "Технологическая операция")
-
-    result = []
+    tz_meta = "Техническое задание на выполнение технологической операции"
+    result_sim = []
     operation_with_links_dict = {}
 
-    tz_meta = "Техническое задание на выполнение технологической операции"
-    for operation in base_operations:
-        operation_tz = find_meta_value(operation, tz_meta)
+    print("Старт сравнения ТЗ...")
+    start_time = time.time()
 
-        operation_with_links_dict[operation.get("name")] = operation_tz
+    total_sim = 0
+    with typer.progressbar(base_operations) as progress:
+        for operation in progress:
+            operation_tz = find_meta_value(operation, tz_meta)
 
-        tz_new_case = find_nested_element(new_case, "name", new_case_path_to_name, "name", tz_meta)
+            operation_with_links_dict[operation.get("name")] = operation_tz
 
-        data = Sim.compare(operation_tz, tz_new_case)
-        result.append({"TO_name": operation.get("name"), "data": data})
+            tz_new_case = find_nested_element(new_case, "name", new_case_path_to_name, "name", tz_meta)
+            data = Sim.compare(tz=operation_tz, tz_new=tz_new_case)
+            result_sim.append({"TO_name": operation.get("name"), "data": data})
+            total_sim += 1
+    print(f"Сравнение ТЗ окончено. Было проведено сравнение {total_sim} ТЗ из базы с новым случаем.")
 
-    if result:
-        similarity_table = process_similarity_tables(input_data=result)
+    end_time = time.time()
+    total_time = end_time - start_time
 
-        # Запись данных в JSON с сохранением структуры
-        with open("result.json", "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=4)
+    print("Время сравнения: {total_time}сек.".format(total_time=round(total_time)))
+    print()
 
-        # Запись данных в JSON с сохранением структуры
-        with open("similarity_table.json", "w", encoding="utf-8") as f:
+    if result_sim:
+        result_sim_filename = "result_sim.json"
+        with open(result_sim_filename, "w", encoding="utf-8") as f:
+            json.dump(result_sim, f, ensure_ascii=False, indent=4)
+            print("Результат сравнения сохранён в {filename}".format(filename=result_sim_filename))
+            print()
+
+        print("Старт KNN...")
+        similarity_table = process_similarity_tables(input_data=result_sim)
+        print("Выполнение KNN окончено.")
+
+        similarity_table_filename = "similarity_table.json"
+        with open(similarity_table_filename, "w", encoding="utf-8") as f:
             json.dump(similarity_table, f, ensure_ascii=False, indent=4)
+            print("Результат KNN сохранён в {filename}".format(filename=similarity_table_filename))
+            print()
 
         # Запись данных в JSON с сохранением структуры
         with open("operation_with_links_dict.json", "w", encoding="utf-8") as f:
@@ -97,15 +122,14 @@ def run_comparison(
 
         operation_dict = replace_links_to_dict(operation_dict_with_links=operation_dict_cropped)
 
-        visualize_data(similarity_table=similarity_table_cropped, operation_dict=operation_dict)
+        print("Старт визуализации...")
+        html = visualize_data(similarity_table=similarity_table_cropped, operation_dict=operation_dict)
+        print("Окончание визуализации.")
 
-    if save_result:
-        with open("result.json", "w") as f:
-            json.dump(result, f)
-            print("result saved")
-            print(result)
-    else:
-        print(result)
+        visualization_filename = "visualization.html"
+        with open(visualization_filename, "w", encoding="utf-8") as file:
+            file.write(html)
+            print("Файл с визуализацией сохранён в {filename}".format(filename=visualization_filename))
 
 
 if __name__ == "__main__":

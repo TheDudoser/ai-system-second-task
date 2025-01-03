@@ -24,11 +24,6 @@ def _get_color(*, similarity_table, full_path, top_key) -> str:
         # Разбиваем sim_path на элементы
         sim_parts = sim_path.replace("_", " ").split(".")
 
-        if sim_parts[-1] == full_parts[-1]:
-            print("#########")
-            print(full_parts)
-            print(sim_parts)
-
         # Проверяем, совпадает ли последний элемент и включен ли путь
         if (
                 sim_parts[-1] == full_parts[-1]  # Последний элемент должен совпадать
@@ -123,8 +118,4 @@ p {
     # Конец HTML-документа
     html += "</body>\n</html>"
 
-    # Сохранение HTML в файл
-    with open("visualization.html", "w", encoding="utf-8") as file:
-        file.write(html)
-
-    print("HTML файл создан: visualization.html")
+    return html
