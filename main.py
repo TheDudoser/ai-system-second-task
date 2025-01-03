@@ -2,13 +2,18 @@ import json
 import time
 from typing import Annotated
 
-from src.api_client import get_without_download_from_repo, get_token_by_current_env_vars
+from src.api_client import (
+    get_with_cache_from_repo,
+    get_without_download_from_repo,
+    get_token_by_current_env_vars,
+)
 from src.extract_element_utils import find_meta_value, find_nested_element
 from src.similarity_table.similarity_table import process_similarity_tables
 from src.visualization.visualizate_similarity_table import visualize_data
 from src.services.replace_links import replace_links_to_dict
 from src.services.d1_filter_and_match import filter_by_d1_and_get_matching_objects
 from src.sim import Sim
+from src.utils import token
 import typer
 
 app = typer.Typer()
@@ -54,12 +59,16 @@ def run_comparison(
         print("Получение данных с API...")
         start_time = time.time()
 
-        new_case = get_without_download_from_repo(new_case_path, get_token_by_current_env_vars())
-        base = get_without_download_from_repo(path, get_token_by_current_env_vars())
+        new_case = get_with_cache_from_repo(new_case_path, token)
+        base = get_with_cache_from_repo(path, token)
 
         end_time = time.time()
         total_time = end_time - start_time
-        print("Данные с API получены. Время обращения к API: {total_time}сек.".format(total_time=round(total_time)))
+        print(
+            "Данные с API получены. Время обращения к API: {total_time}сек.".format(
+                total_time=round(total_time)
+            )
+        )
         print()
     else:
         with open(new_case_path, "r", encoding="utf-8") as f:
@@ -83,11 +92,15 @@ def run_comparison(
 
             operation_with_links_dict[operation.get("name")] = operation_tz
 
-            tz_new_case = find_nested_element(new_case, "name", new_case_path_to_name, "name", tz_meta)
+            tz_new_case = find_nested_element(
+                new_case, "name", new_case_path_to_name, "name", tz_meta
+            )
             data = Sim.compare(tz=operation_tz, tz_new=tz_new_case)
             result_sim.append({"TO_name": operation.get("name"), "data": data})
             total_sim += 1
-    print(f"Сравнение ТЗ окончено. Было проведено сравнение {total_sim} ТЗ из базы с новым случаем.")
+    print(
+        f"Сравнение ТЗ окончено. Было проведено сравнение {total_sim} ТЗ из базы с новым случаем."
+    )
 
     end_time = time.time()
     total_time = end_time - start_time
@@ -123,13 +136,17 @@ def run_comparison(
         operation_dict = replace_links_to_dict(operation_dict_with_links=operation_dict_cropped)
 
         print("Старт визуализации...")
-        html = visualize_data(similarity_table=similarity_table_cropped, operation_dict=operation_dict)
+        html = visualize_data(
+            similarity_table=similarity_table_cropped, operation_dict=operation_dict
+        )
         print("Окончание визуализации.")
 
         visualization_filename = "visualization.html"
         with open(visualization_filename, "w", encoding="utf-8") as file:
             file.write(html)
-            print("Файл с визуализацией сохранён в {filename}".format(filename=visualization_filename))
+            print(
+                "Файл с визуализацией сохранён в {filename}".format(filename=visualization_filename)
+            )
 
 
 if __name__ == "__main__":

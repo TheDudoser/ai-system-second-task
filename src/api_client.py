@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 from src.dotnev_utils import get_dotenv_by_key
@@ -27,10 +28,7 @@ def get_token(username: str, password: str) -> str:
     :param password: password
     :return: token
     """
-    headers = {
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
+    headers = {"accept": "application/json", "Content-Type": "application/json"}
 
     payload = {"username": username, "password": password}
     r = requests.post("https://iacpaas.dvo.ru/api/signin", json=payload, headers=headers)
@@ -40,11 +38,17 @@ def get_token(username: str, password: str) -> str:
 
 
 def get_token_by_current_env_vars():
-    return get_token(get_dotenv_by_key('API_EMAIL'), get_dotenv_by_key('API_PASS'))
+    return get_token(get_dotenv_by_key("API_EMAIL"), get_dotenv_by_key("API_PASS"))
 
 
-def get_data_from_repo(path: str, token: str, start_target: str = '', json_type: str = "universal", compress: bool = False,
-                       no_blob_data: bool = True):
+def get_data_from_repo(
+    path: str,
+    token: str,
+    start_target: str = "",
+    json_type: str = "universal",
+    compress: bool = False,
+    no_blob_data: bool = True,
+):
     """
     Downloads a file from iacpass repository.
     :param start_target: path starting from which data will be returned
@@ -56,16 +60,29 @@ def get_data_from_repo(path: str, token: str, start_target: str = '', json_type:
     :return: None
     """
 
-    params = {"path": path, "json-type": json_type, "compress": compress, "no-blob-data": no_blob_data, 'start-target-concept-path': start_target}
+    params = {
+        "path": path,
+        "json-type": json_type,
+        "compress": compress,
+        "no-blob-data": no_blob_data,
+        "start-target-concept-path": start_target,
+    }
 
     headers = {"Authorization": f"Bearer {token}"}
 
-    return requests.get("https://iacpaas.dvo.ru/api/data/export/user-item", params=params, headers=headers)
+    return requests.get(
+        "https://iacpaas.dvo.ru/api/data/export/user-item", params=params, headers=headers
+    )
 
 
-def get_without_download_from_repo(path: str, token: str, start_target: str = '', json_type: str = "universal",
-                                   compress: bool = False,
-                                   no_blob_data: bool = True):
+def get_without_download_from_repo(
+    path: str,
+    token: str,
+    start_target: str = "",
+    json_type: str = "universal",
+    compress: bool = False,
+    no_blob_data: bool = True,
+):
     """
     Get a data from iacpass repository.
     :param start_target: path starting from which data will be returned
@@ -85,8 +102,15 @@ def get_without_download_from_repo(path: str, token: str, start_target: str = ''
         raise Exception("Failed to get data")
 
 
-def download_from_repo(name: str, path: str, token: str, start_target: str = '', json_type: str = "universal", compress: bool = False,
-                       no_blob_data: bool = True) -> None:
+def download_from_repo(
+    name: str,
+    path: str,
+    token: str,
+    start_target: str = "",
+    json_type: str = "universal",
+    compress: bool = False,
+    no_blob_data: bool = True,
+) -> None:
     """
     Downloads a file from iacpass repository.
     :param start_target: path starting from which data will be returned
@@ -111,3 +135,46 @@ def download_from_repo(name: str, path: str, token: str, start_target: str = '',
         print(f"File {name}.json has been saved")
     else:
         raise Exception("Failed to download file")
+
+
+def get_with_cache_from_repo(
+    path: str,
+    token: str,
+    start_target: str = "",
+    json_type: str = "universal",
+    compress: bool = False,
+    no_blob_data: bool = True,
+    cache_dir: str = "cache",
+):
+    """
+    Get data from iacpass repository, downloading only if not already cached.
+    :param start_target: path starting from which data will be returned
+    :param path: Path to the file
+    :param compress: ...
+    :param no_blob_data: ...
+    :param cache_dir: Directory to store cached files
+    :return: Parsed JSON data
+    """
+    os.makedirs(cache_dir, exist_ok=True)
+
+    cache_file_path = os.path.join(cache_dir, f"{os.path.basename(path)}.json")
+
+    if os.path.exists(cache_file_path):
+        print("cache_file_path exists: ", cache_file_path)
+        with open(cache_file_path, "r", encoding="utf-8") as cache_file:
+            return parse_nested_json(json.load(cache_file))
+
+    print("fetching data...")
+    # Fetch data if not cached
+    r = get_data_from_repo(path, token, start_target, json_type, compress, no_blob_data)
+    if r.status_code == 200:
+        response_json = r.json()
+        parsed_data = parse_nested_json(response_json)
+
+        # Caching...
+        with open(cache_file_path, "w", encoding="utf-8") as cache_file:
+            json.dump(parsed_data, cache_file, indent=2, ensure_ascii=False)
+
+        return parsed_data
+    else:
+        raise Exception("Failed to get data")
