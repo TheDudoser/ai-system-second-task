@@ -69,7 +69,7 @@ class TestSim(unittest.TestCase):
 
     def test_materials_in_class(self):
         tz = load_fixture("materials/tz.json")
-        print(Sim.compare_materials(tz, tz))
+        self.assertEqual(Mark.GREEN, Sim.compare_materials(tz, tz))
 
     def test_materials_detail(self):
         # TODO: Наплавка на основе Олова, сказали что добавили рабочую поверхность

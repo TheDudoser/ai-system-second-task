@@ -24,58 +24,67 @@ class Sim:
 
     # про пропуски
     @staticmethod
-    def resolve_pass_tz(el, el_new) -> Mark | list | None:
+    def resolve_pass_tz(el, el_new) -> Mark | list:
         if el is not None and el_new is None:
             return Mark.GREEN
         elif el is None and el_new is not None:
             return Mark.RED
         elif el is not None and el_new is not None:
             return [el, el_new]
-        else:  # Если нет обоих, то и сравнивать нечего, просто пропускаем
-            return None
+        else:
+            return Mark.RED
 
     @staticmethod
-    def compare_analogues(el, el_new) -> Mark | None:
+    def compare_analogues(el, el_new) -> Mark:
         name_el = el['name']
         name_el_new = el_new['name']
 
-        el_analogues = extract_names_by_meta_iterative(el, Material.ANALOGUES.value)
-        el_new_analogues = extract_names_by_meta_iterative(el_new, Material.ANALOGUES.value)
+        el_analogues = extract_names_by_meta_iterative(el, Material.ANALOGUES)
+        el_new_analogues = extract_names_by_meta_iterative(el_new, Material.ANALOGUES)
 
         if name_el in el_new_analogues or name_el_new in el_analogues:
             return Mark.GREEN
         else:
-            return None
+            return Mark.RED
 
     @staticmethod
-    def compare(tz, tz_new) -> dict[str, int]:
+    def __fill_compare_processing_object(tz, tz_new) -> dict[str, Mark]:
         result = dict()
 
-        ###> Сравнение Объектов обработки ###
         # Объект обработки
-        processing_object = find_meta_value(tz, ProcessingObject.PO.value)
-        processing_object_new = find_meta_value(tz_new, ProcessingObject.PO.value)
+        processing_object = find_meta_value(tz, ProcessingObject.PO)
+        processing_object_new = find_meta_value(tz_new, ProcessingObject.PO)
 
         # Объект обработки -> Подложка / Деталь
         # Может быть либо Подложка, либо Деталь, но есть нюанс в сравнении материалов для Детали
-        if find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE.value):
+        if find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE):
             is_substrate = True
-            processing_object_concrete = find_meta_value(processing_object, ProcessingObject.SUBSTRATE.value)
-            processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE.value)
+            processing_object_concrete = find_meta_value(processing_object, ProcessingObject.SUBSTRATE)
+            processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.SUBSTRATE)
         else:
             is_substrate = False
-            processing_object_concrete = find_meta_value(processing_object, ProcessingObject.DETAIL.value)
-            processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.DETAIL.value)
+            processing_object_concrete = find_meta_value(processing_object, ProcessingObject.DETAIL)
+            processing_object_concrete_new = find_meta_value(processing_object_new, ProcessingObject.DETAIL)
 
         if processing_object_concrete and processing_object_concrete_new:
             pass_mark = Sim.resolve_pass_tz(
                 processing_object_concrete, processing_object_concrete_new
             )
 
-            # Как сравнивать если высокоуровневого эл-та нет? Решил, что просто пасуем
-            if isinstance(pass_mark, list):
+            if isinstance(pass_mark, Mark):
+                result[
+                    ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MATERIAL.normalize()
+                    ] = pass_mark
+                result[
+                    ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MASS.normalize()
+                    ] = pass_mark
+                result[
+                    ProcessingObject.PO.normalize() + '.' + SubstrateDetail.GEOM_CHARS.normalize()
+                    ] = pass_mark
+                # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
+            elif isinstance(pass_mark, list):
                 # Подложка -> Материал
-                result_sim_po_materials = None
+                result_sim_po_materials = Mark.RED
                 if is_substrate:
                     result_sim_po_materials = Sim.compare_materials(
                         processing_object_concrete,
@@ -103,52 +112,65 @@ class Sim:
                             base_new
                         )
 
-                if result_sim_po_materials:
-                    result[
-                        ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MATERIAL.normalize()
-                        ] = result_sim_po_materials.value
+                result[
+                    ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MATERIAL.normalize()
+                    ] = result_sim_po_materials
 
                 # Подложка/Деталь -> Масса
                 result_sim_po_mass = Sim.compare_mass(
                     processing_object_concrete,
                     processing_object_concrete_new
                 )
-                if result_sim_po_mass:
-                    result[
-                        ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MASS.normalize()
-                        ] = result_sim_po_mass.value
+                result[
+                    ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MASS.normalize()
+                    ] = result_sim_po_mass
 
                 # Подложка/Деталь -> Геометрические характеристики
                 result_sim_po_char = Sim.compare_geometrical_characteristics(
                     processing_object_concrete,
                     processing_object_concrete_new
                 )
-                if result_sim_po_char:
-                    result[
-                        ProcessingObject.PO.normalize() + '.' + SubstrateDetail.GEOM_CHARS.normalize()
-                        ] = result_sim_po_char.value
+                result[
+                    ProcessingObject.PO.normalize() + '.' + SubstrateDetail.GEOM_CHARS.normalize()
+                    ] = result_sim_po_char
 
                 # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
 
-        ###< Сравнение Объектов обработки ###
+                return result
 
-        ###> Материал для выполнения ТО ###
-        material_for_maintenance = find_meta_value(tz, MaterialForMaintenance.MFM.value)
-        material_for_maintenance_new = find_meta_value(tz_new, MaterialForMaintenance.MFM.value)
+        result[
+            ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MATERIAL.normalize()
+            ] = Mark.RED
+        result[
+            ProcessingObject.PO.normalize() + '.' + SubstrateDetail.MASS.normalize()
+            ] = Mark.RED
+        result[
+            ProcessingObject.PO.normalize() + '.' + SubstrateDetail.GEOM_CHARS.normalize()
+            ] = Mark.RED
+        # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
+
+        return result
+
+    @staticmethod
+    def __fill_compare_material_for_maintenance(tz, tz_new) -> dict[str, Mark]:
+        result = dict()
+
+        material_for_maintenance = find_meta_value(tz, MaterialForMaintenance.MFM)
+        material_for_maintenance_new = find_meta_value(tz_new, MaterialForMaintenance.MFM)
 
         # Уточнял "может ли быть оба" (проволока и порошок), сказали всегда только 1
-        if find_meta_value(material_for_maintenance_new, MaterialForMaintenance.METAL_POWDER.value):
+        if find_meta_value(material_for_maintenance_new, MaterialForMaintenance.METAL_POWDER):
             is_metal_wire = False
             material_for_maintenance_concrete = find_meta_value(material_for_maintenance,
-                                                                MaterialForMaintenance.METAL_POWDER.value)
+                                                                MaterialForMaintenance.METAL_POWDER)
             material_for_maintenance_concrete_new = find_meta_value(material_for_maintenance_new,
-                                                                    MaterialForMaintenance.METAL_POWDER.value)
+                                                                    MaterialForMaintenance.METAL_POWDER)
         else:
             is_metal_wire = True
             material_for_maintenance_concrete = find_meta_value(material_for_maintenance,
-                                                                MaterialForMaintenance.METAL_WIRE.value)
+                                                                MaterialForMaintenance.METAL_WIRE)
             material_for_maintenance_concrete_new = find_meta_value(material_for_maintenance_new,
-                                                                    MaterialForMaintenance.METAL_WIRE.value)
+                                                                    MaterialForMaintenance.METAL_WIRE)
 
         if material_for_maintenance_concrete and material_for_maintenance_concrete_new:
             if is_metal_wire:
@@ -158,14 +180,19 @@ class Sim:
                 result_mfm = Sim.compare_metal_powder(material_for_maintenance_concrete,
                                                       material_for_maintenance_concrete_new)
 
-            if result_mfm:
-                result[MaterialForMaintenance.MFM.normalize()] = result_mfm.value
-        ###< Материал для выполнения ТО ###
+            result[MaterialForMaintenance.MFM.normalize()] = result_mfm
+            return result
 
-        ###> Технологические газы ###
+        result[MaterialForMaintenance.MFM.normalize()] = Mark.RED
+        return result
+
+    @staticmethod
+    def __fill_compare_process_gas(tz, tz_new) -> dict[str, Mark]:
+        result = dict()
+
         # В онтологии этот элемент пустой (даже link нет)...
-        pg = find_meta_value(tz, ProcessGas.PG.value)
-        pg_new = find_meta_value(tz_new, ProcessGas.PG.value)
+        pg = find_meta_value(tz, ProcessGas.PG)
+        pg_new = find_meta_value(tz_new, ProcessGas.PG)
         pass_mark = Sim.resolve_pass_tz(
             pg, pg_new
         )
@@ -174,77 +201,85 @@ class Sim:
             # В "Онтология архива протоколов технологических операций лазерной обработки" есть "Наполняющий газ",
             #   который по идеи и есть моногаз, поэтому предположил, что оно должно приходить нам примерно в таком виде...
             # Чтобы точно не облажаться, берём окончание названия, причём у первого successors. Это костыль, но данных то нет, делать больше нечего...
-            monogas_parent = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS.value)
-            monogas_parent_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS.value)
+            monogas_parent = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS)
+            monogas_parent_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS)
 
             # Для газовых смесей аналогично, как и с моногазом костыли на костылях из-за отсутствия данных...
             # TODO: Возможно, немного переделать нужно будет
-            gas_mixture_parent = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS_MIXTURE.value)
-            gas_mixture_parent_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS_MIXTURE.value)
+            gas_mixture_parent = find_name_value_endswith(pg['successors'][0], ProcessGas.GAS_MIXTURE)
+            gas_mixture_parent_new = find_name_value_endswith(pg_new['successors'][0], ProcessGas.GAS_MIXTURE)
 
             # Судя по выводу, у нас может быть либо Моногаз, либо Газовая смесь
             if monogas_parent is not None and monogas_parent_new is not None:
-                monogas = find_meta_value(monogas_parent, ProcessGas.GAS.value.capitalize())
-                monogas_new = find_meta_value(monogas_parent_new, ProcessGas.GAS.value.capitalize())
+                monogas = find_meta_value(monogas_parent, ProcessGas.GAS.capitalize())
+                monogas_new = find_meta_value(monogas_parent_new, ProcessGas.GAS.capitalize())
 
                 result_compare_monogas = Sim.compare_monogas(monogas, monogas_new)
                 if result_compare_monogas:
-                    result[ProcessGas.PG.value] = result_compare_monogas.value
+                    result[ProcessGas.PG] = result_compare_monogas
             elif gas_mixture_parent is not None and gas_mixture_parent_new is not None:
-                gas_mixture = find_meta_value(monogas_parent, ProcessGas.GAS_MIXTURE.value.capitalize())
-                gas_mixture_new = find_meta_value(monogas_parent_new, ProcessGas.GAS_MIXTURE.value.capitalize())
+                gas_mixture = find_meta_value(monogas_parent, ProcessGas.GAS_MIXTURE.capitalize())
+                gas_mixture_new = find_meta_value(monogas_parent_new, ProcessGas.GAS_MIXTURE.capitalize())
 
                 result_compare_gas_mixture = Sim.compare_gas_mixture(gas_mixture, gas_mixture_new)
                 if result_compare_gas_mixture:
-                    result[ProcessGas.PG.value] = result_compare_gas_mixture.value
+                    result[ProcessGas.PG.normalize()] = result_compare_gas_mixture
 
-        ###< Технологические газы ###
+            return result
 
-        ###> Требования к результату операции ###
-        ror = find_meta_value(tz, RequirementsOperationResult.ROR.value)
-        ror_new = find_meta_value(tz_new, RequirementsOperationResult.ROR.value)
+        result[ProcessGas.PG.normalize()] = Mark.RED
 
-        if ror and ror_new:
+        return result
+
+    @staticmethod
+    def __fill_compare_ror(tz, tz_new) -> dict[str, Mark]:
+        result = dict()
+
+        ror = find_meta_value(tz, RequirementsOperationResult.ROR)
+        ror_new = find_meta_value(tz_new, RequirementsOperationResult.ROR)
+        pass_mark = Sim.resolve_pass_tz(
+            ror, ror_new
+        )
+
+        if isinstance(pass_mark, list):
             # Требования к результату операции -> Геометрические характеристики
             result_sim_ror_char = Sim.compare_geometrical_characteristics(
                 ror,
                 ror_new
             )
-            if result_sim_ror_char:
-                result[
-                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.GEOM_CHARS.normalize()
-                    ] = result_sim_ror_char.value
+            result[
+                RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.GEOM_CHARS.normalize()
+                ] = result_sim_ror_char
 
             # Требования к результату операции -> Дефекты наплавленного материала
             # Внутри "Дефекты наплавленного материала" лежат обычные дефекты
             defects_deposited_material = find_meta_value(ror,
-                                                         RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+                                                         RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL)
             defects_deposited_material_new = find_meta_value(ror_new,
-                                                             RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.value)
+                                                             RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL)
 
             result_defects_pass = Sim.resolve_pass_tz(defects_deposited_material, defects_deposited_material_new)
             if isinstance(result_defects_pass, Mark):
                 result[
                     RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
-                    ] = result_defects_pass.value
+                    ] = result_defects_pass
             elif isinstance(result_defects_pass, list):
                 result_sim_ror_defects = Sim.compare_defects(defects_deposited_material, defects_deposited_material_new)
-                if result_sim_ror_defects:
-                    result[
-                        RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
-                        ] = result_sim_ror_defects.value
+                result[
+                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
+                    ] = result_sim_ror_defects
 
             # Требования к результату операции -> Элементный состав
             # Имеем снова неполные данные, так что действуем по догадке
-            elemental_composition = find_meta_value(ror, RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
+            elemental_composition = find_meta_value(ror, RequirementsOperationResult.ELEMENTAL_COMPOSITION)
             elemental_composition_new = find_meta_value(ror_new,
-                                                        RequirementsOperationResult.ELEMENTAL_COMPOSITION.value)
+                                                        RequirementsOperationResult.ELEMENTAL_COMPOSITION)
 
             result_elemental_composition_pass = Sim.resolve_pass_tz(elemental_composition, elemental_composition_new)
             if isinstance(result_elemental_composition_pass, Mark):
                 result[
-                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
-                    ] = result_elemental_composition_pass.value
+                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
+                    ] = result_elemental_composition_pass
             elif isinstance(result_elemental_composition_pass, list):
                 # В онтологии снова неполные данные, где ссылка на структуру элементного состава,
                 #   поэтому страхуемся на такой случай и учитываем link
@@ -261,18 +296,46 @@ class Sim:
 
                 result_elemental_composition = Sim.elemental_composition_compare(elemental_composition,
                                                                                  elemental_composition_new)
-                if result_elemental_composition:
-                    result[
-                        RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
-                        ] = result_elemental_composition.value
+                result[
+                    RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
+                    ] = result_elemental_composition
 
             # В рамках нашей задачи не реализуем (написано в требованиях): Требования к результату операции -> Микроструктура
-        ###< Требования к результату операции ###
+
+            return result
+
+        result[
+            RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.GEOM_CHARS.normalize()
+        ] = Mark.RED
+        result[
+            RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
+        ] = Mark.RED
+        result[
+            RequirementsOperationResult.ROR.normalize() + '.' + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
+        ] = Mark.RED
 
         return result
 
     @staticmethod
-    def compare_geometrical_characteristics(tz, tz_new) -> Mark | None:
+    def compare(tz, tz_new) -> dict[str, int]:
+        result = dict()
+
+        # Сравнение Объектов обработки
+        result.update(Sim.__fill_compare_processing_object(tz, tz_new))
+
+        # Материал для выполнения ТО
+        result.update(Sim.__fill_compare_material_for_maintenance(tz, tz_new))
+
+        # Технологические газы
+        result.update(Sim.__fill_compare_process_gas(tz, tz_new))
+
+        # Требования к результату операции
+        result.update(Sim.__fill_compare_ror(tz, tz_new))
+
+        return result
+
+    @staticmethod
+    def compare_geometrical_characteristics(tz, tz_new) -> Mark:
         def compare_subtree(subtree1, subtree2):
             if isinstance(subtree1, dict) and isinstance(subtree2, dict):
                 if subtree1.keys() != subtree2.keys():
@@ -297,7 +360,7 @@ class Sim:
 
         # default
         pass_result = Sim.resolve_pass_tz(el, el_new)
-        if not isinstance(pass_result, list):
+        if isinstance(pass_result, Mark):
             return pass_result
 
         if compare_subtree(el['successors'], el_new['successors']):
@@ -306,7 +369,7 @@ class Sim:
             return Mark.RED
 
     @staticmethod
-    def compare_defects(tz, tz_new) -> Mark | None:
+    def compare_defects(tz, tz_new) -> Mark:
         def extract_defect_value(data):
             for requirement in data.get('successors', []):
                 for defect_group in requirement.get('successors', []):
@@ -334,9 +397,9 @@ class Sim:
             return Mark.RED
 
     @staticmethod
-    def compare_materials(tz, tz_new) -> Mark | None:
-        el = find_meta_value(tz, SubstrateDetail.MATERIAL.value)
-        el_new = find_meta_value(tz_new, SubstrateDetail.MATERIAL.value)
+    def compare_materials(tz, tz_new) -> Mark:
+        el = find_meta_value(tz, SubstrateDetail.MATERIAL)
+        el_new = find_meta_value(tz_new, SubstrateDetail.MATERIAL)
 
         # default
         pass_result = Sim.resolve_pass_tz(el, el_new)
@@ -358,7 +421,7 @@ class Sim:
 
         # 1. Один из материалов явно указан в перечне аналогичных для другого
         result_compare_analogues = Sim.compare_analogues(true_el, true_el_new)
-        if isinstance(result_compare_analogues, Mark):
+        if result_compare_analogues != Mark.RED:
             return result_compare_analogues
 
         # 2. Принадлежность материалов разным классам
@@ -373,9 +436,9 @@ class Sim:
 
     # Немного модифицированный метод по сравнению с sim_element_contains.ipynb
     @staticmethod
-    def elemental_composition_compare(json1, json2):
-        osnov_1 = find_meta_value(json1, ElementalComposition.BASE.value)
-        osnov_2 = find_meta_value(json2, ElementalComposition.BASE.value)
+    def elemental_composition_compare(json1, json2) -> Mark:
+        osnov_1 = find_meta_value(json1, ElementalComposition.BASE)
+        osnov_2 = find_meta_value(json2, ElementalComposition.BASE)
 
         values_1 = [item['value'] for item in osnov_1['successors']]
         values_2 = [item['value'] for item in osnov_2['successors']]
@@ -389,20 +452,20 @@ class Sim:
                 pair_counter = 0  # счетчик пар
                 green_counter = 0  # счётчик зелёных пар
 
-                elemental_composition1 = find_meta_value(json1, ElementalComposition.EC.value)
-                elemental_composition2 = find_meta_value(json2, ElementalComposition.EC.value)
+                elemental_composition1 = find_meta_value(json1, ElementalComposition.EC)
+                elemental_composition2 = find_meta_value(json2, ElementalComposition.EC)
 
                 for component in elemental_composition1['successors']:
-                    if component['meta'] != ElementalComposition.COMPONENT.value:
+                    if component['meta'] != ElementalComposition.COMPONENT:
                         continue
 
-                    chim_element_1 = find_meta_value(component, ElementalComposition.CHIM_ELEMENT.value)
+                    chim_element_1 = find_meta_value(component, ElementalComposition.CHIM_ELEMENT)
 
                     if chim_element_1 is None or chim_element_1.get('name', None) is None:
                         continue
 
                     for component_2 in elemental_composition2['successors']:
-                        if component['meta'] != ElementalComposition.COMPONENT.value:
+                        if component['meta'] != ElementalComposition.COMPONENT:
                             continue
 
                         chim_element_2 = find_name_value(component_2, chim_element_1['name'])
@@ -411,25 +474,25 @@ class Sim:
                             pair_counter += 1
 
                             number_interval_1 = find_meta_value(chim_element_1['successors'],
-                                                                IntervalType.NUM_INTERVAL.value)
+                                                                IntervalType.NUM_INTERVAL)
                             number_interval_2 = find_meta_value(chim_element_2['successors'],
-                                                                IntervalType.NUM_INTERVAL.value)
+                                                                IntervalType.NUM_INTERVAL)
 
-                            not_bigger_1 = find_meta_value(chim_element_1, IntervalType.NOT_BIGGER.value)
-                            not_bigger_2 = find_meta_value(chim_element_2, IntervalType.NOT_BIGGER.value)
+                            not_bigger_1 = find_meta_value(chim_element_1, IntervalType.NOT_BIGGER)
+                            not_bigger_2 = find_meta_value(chim_element_2, IntervalType.NOT_BIGGER)
 
                             # 3.1
                             if number_interval_1 is not None and number_interval_2 is not None:
-                                low_border_1 = find_meta_value(number_interval_1, IntervalType.LOW_BORDER.value)
-                                top_border_1 = find_meta_value(number_interval_1, IntervalType.TOP_BORDER.value)
+                                low_border_1 = find_meta_value(number_interval_1, IntervalType.LOW_BORDER)
+                                top_border_1 = find_meta_value(number_interval_1, IntervalType.TOP_BORDER)
 
                                 interval_1 = Interval(
                                     float(low_border_1['successors'][0]['value']),
                                     float(top_border_1['successors'][0]['value'])
                                 )
 
-                                low_border_2 = find_meta_value(number_interval_2, IntervalType.LOW_BORDER.value)
-                                top_border_2 = find_meta_value(number_interval_2, IntervalType.TOP_BORDER.value)
+                                low_border_2 = find_meta_value(number_interval_2, IntervalType.LOW_BORDER)
+                                top_border_2 = find_meta_value(number_interval_2, IntervalType.TOP_BORDER)
 
                                 interval_2 = Interval(
                                     float(low_border_2['successors'][0]['value']),
@@ -449,8 +512,8 @@ class Sim:
 
                                     interval_1 = Interval(0.0, float(interval_value_1['value']))
 
-                                    low_border_2 = find_meta_value(number_interval_2, IntervalType.LOW_BORDER.value)
-                                    top_border_2 = find_meta_value(number_interval_2, IntervalType.TOP_BORDER.value)
+                                    low_border_2 = find_meta_value(number_interval_2, IntervalType.LOW_BORDER)
+                                    top_border_2 = find_meta_value(number_interval_2, IntervalType.TOP_BORDER)
 
                                     interval_2 = Interval(
                                         float(low_border_2['successors'][0]['value']),
@@ -478,7 +541,7 @@ class Sim:
             return Mark.RED
 
     @staticmethod
-    def compare_mass(tz, tz_new) -> Mark | None:
+    def compare_mass(tz, tz_new) -> Mark:
         def get_mass_interval(local_mass, local_intervals):
             """Находит интервал, содержащий массу."""
             for interval in local_intervals:
@@ -486,8 +549,8 @@ class Sim:
                     return interval
             return None
 
-        el = find_meta_value(tz, SubstrateDetail.MASS.value)
-        el_new = find_meta_value(tz_new, SubstrateDetail.MASS.value)
+        el = find_meta_value(tz, SubstrateDetail.MASS)
+        el_new = find_meta_value(tz_new, SubstrateDetail.MASS)
 
         # default
         pass_result = Sim.resolve_pass_tz(el, el_new)
@@ -547,11 +610,11 @@ class Sim:
                 return Mark.RED
 
     @staticmethod
-    def compare_material_for_maintenance_first_and_second_step(tz, tz_new) -> Mark | None | list:
+    def __compare_material_for_maintenance_first_and_second_step(tz, tz_new) -> Mark | list:
         # default
         el, el_new = tz, tz_new
         pass_result = Sim.resolve_pass_tz(tz, tz_new)
-        if not isinstance(pass_result, list):
+        if isinstance(pass_result, Mark):
             return pass_result
 
         # Так как в материалах эталонных данных почти ничего и нет, нам нужно вытащить доп информацию из link
@@ -569,7 +632,7 @@ class Sim:
 
         # 1. Один из материалов явно указан в перечне аналогичных для другого
         result_compare_analogues = Sim.compare_analogues(true_el, true_el_new)
-        if isinstance(result_compare_analogues, Mark):
+        if result_compare_analogues != Mark.RED:
             return result_compare_analogues
 
         # 2. Принадлежность материалов разным классам
@@ -582,42 +645,38 @@ class Sim:
         return [true_el, true_el_new]
 
     @staticmethod
-    def compare_metal_powder(tz, tz_new) -> Mark | None:
-        first_step_result = Sim.compare_material_for_maintenance_first_and_second_step(tz, tz_new)
+    def compare_metal_powder(tz, tz_new) -> Mark:
+        first_step_result = Sim.__compare_material_for_maintenance_first_and_second_step(tz, tz_new)
         if not isinstance(first_step_result, list):
             return first_step_result
         else:
             true_el, true_el_new = first_step_result
 
-        def compare_third_part_metal_powder(mp, mp_new) -> Mark | None:
+        def compare_third_part_metal_powder(mp, mp_new) -> Mark:
             # 3.
             # 3.1. Подобие сплавов = подобие материалов
             # Хитрое вытаскивание, так как зачем-то в Материале существует ненужная вложенность
-            material = find_meta_value(mp, MetalPowder.MATERIAL.value)
-            material_new = find_meta_value(mp_new, MetalPowder.MATERIAL.value)
+            material = find_meta_value(mp, MetalPowder.MATERIAL)
+            material_new = find_meta_value(mp_new, MetalPowder.MATERIAL)
 
             pass_result_material = Sim.resolve_pass_tz(material, material_new)
-            if not isinstance(pass_result_material, list):
-                # Если такая ситуация произошла, то у нас не полные данные
-                if pass_result_material is None:
-                    return None
-
+            if isinstance(pass_result_material, Mark):
                 alloy_similarity = pass_result_material
             else:
-                material_sub = find_meta_value(material, MetalPowder.MATERIAL.value)
-                material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL.value)
+                material_sub = find_meta_value(material, MetalPowder.MATERIAL)
+                material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL)
                 alloy_similarity = Sim.compare_materials(material_sub['successors'], material_sub_new['successors'])
             # Конец хитрого вытаскивания
 
             # 3.2. Подобие методов получения
             # TODO: Метод получения в онтологии не описан какой вид имеет (в примерах он с пустым содержанием)...
             #   Поэтому, пока предусматриваем ситуацию когда его нет
-            if not find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING.value):
+            if not find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING):
                 method_similarity = Mark.RED
             else:
                 # Сделал по предположению как оно выглядит
-                method = find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING.value)['name']
-                method_new = find_meta_value(mp_new, MetalPowder.METHOD_OF_OBTAINING.value)['name']
+                method = find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING)['name']
+                method_new = find_meta_value(mp_new, MetalPowder.METHOD_OF_OBTAINING)['name']
                 method_similarity = Mark.GREEN if method == method_new else Mark.RED
 
             # 3.3. Подобие размеров частиц
@@ -631,21 +690,17 @@ class Sim:
                 Interval(250.0, sys.float_info.max)
             ]
             # Извлекли интервалы входных данных
-            particle_size = find_meta_value(mp, MetalPowder.PARTICLE_SIZE.value)
-            particle_size_new = find_meta_value(mp_new, MetalPowder.PARTICLE_SIZE.value)
+            particle_size = find_meta_value(mp, MetalPowder.PARTICLE_SIZE)
+            particle_size_new = find_meta_value(mp_new, MetalPowder.PARTICLE_SIZE)
 
             # Пропуск
             pass_result = Sim.resolve_pass_tz(particle_size, particle_size_new)
-            size_similarity = None
-            if not isinstance(pass_result, list):
-                # Если такая ситуация произошла, то у нас не полные данные
-                if pass_result is None:
-                    return None
-
+            size_similarity = Mark.RED
+            if isinstance(pass_result, Mark):
                 size_similarity = pass_result
             else:
-                min_max_particle_size = find_meta_value(particle_size, MetalPowder.MIN_MAX_PARTICLE_SIZE.value)
-                min_max_particle_size_new = find_meta_value(particle_size_new, MetalPowder.MIN_MAX_PARTICLE_SIZE.value)
+                min_max_particle_size = find_meta_value(particle_size, MetalPowder.MIN_MAX_PARTICLE_SIZE)
+                min_max_particle_size_new = find_meta_value(particle_size_new, MetalPowder.MIN_MAX_PARTICLE_SIZE)
 
                 # TODO: И опять ситуация, когда что-то пустое.
                 #  Вернее пример есть, но он ссылается на "Онтология описания характеристик и их значений", которая максимально непонятная...)
@@ -654,22 +709,22 @@ class Sim:
                 else:
                     # [a, b]
                     min_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size, IntervalType.LOW_BORDER.value),
+                        find_meta_value(min_max_particle_size, IntervalType.LOW_BORDER),
                         'Числовое значение'
                     )['value']
                     max_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size, IntervalType.TOP_BORDER.value),
+                        find_meta_value(min_max_particle_size, IntervalType.TOP_BORDER),
                         'Числовое значение'
                     )['value']
                     interval = Interval(min_particle_size, max_particle_size)
 
                     # [c, d]
                     min_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size_new, IntervalType.LOW_BORDER.value),
+                        find_meta_value(min_max_particle_size_new, IntervalType.LOW_BORDER),
                         'Числовое значение'
                     )['value']
                     max_particle_size = find_meta_value(
-                        find_meta_value(min_max_particle_size_new, IntervalType.TOP_BORDER.value),
+                        find_meta_value(min_max_particle_size_new, IntervalType.TOP_BORDER),
                         'Числовое значение'
                     )['value']
                     interval_new = Interval(min_particle_size, max_particle_size)
@@ -706,15 +761,11 @@ class Sim:
                         elif not interval.intersects(interval_new):
                             size_similarity = Mark.RED
 
-            # Если такая ситуация произошла, то у нас не полные данные
-            if size_similarity is None:
-                return None
-
             # Определение цвета по наименьшей похожести (Пункт 3)
             similarities = {
-                alloy_similarity.value,
-                method_similarity.value,
-                size_similarity.value
+                alloy_similarity,
+                method_similarity,
+                size_similarity
             }
 
             # Для 3.1 - 3.3 из трех цветов всегда берется цвет, означающий наименьшую похожесть.
@@ -723,8 +774,8 @@ class Sim:
         return compare_third_part_metal_powder(true_el, true_el_new)
 
     @staticmethod
-    def compare_metal_wire(tz, tz_new) -> Mark | None:
-        first_step_result = Sim.compare_material_for_maintenance_first_and_second_step(tz, tz_new)
+    def compare_metal_wire(tz, tz_new) -> Mark:
+        first_step_result = Sim.__compare_material_for_maintenance_first_and_second_step(tz, tz_new)
         if isinstance(first_step_result, Mark):
             return first_step_result
         else:
@@ -741,19 +792,15 @@ class Sim:
             # 3.
             # 3.1. Подобие сплавов
             # Хитрое вытаскивание, так как зачем-то в Материале существует вложенность
-            material = find_meta_value(mw, MetalPowder.MATERIAL.value)
-            material_new = find_meta_value(mw_new, MetalPowder.MATERIAL.value)
+            material = find_meta_value(mw, MetalPowder.MATERIAL)
+            material_new = find_meta_value(mw_new, MetalPowder.MATERIAL)
 
             pass_result_material = Sim.resolve_pass_tz(material, material_new)
             if not isinstance(pass_result_material, list):
-                # Если такая ситуация произошла, то у нас не полные данные
-                if pass_result_material is None:
-                    return None
-
                 alloy_similarity = pass_result_material
             else:
-                material_sub = find_meta_value(material, MetalPowder.MATERIAL.value)
-                material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL.value)
+                material_sub = find_meta_value(material, MetalPowder.MATERIAL)
+                material_sub_new = find_meta_value(material_new, MetalPowder.MATERIAL)
                 alloy_similarity = Sim.compare_materials(material_sub, material_sub_new)
             # Конец хитрого вытаскивания
 
@@ -798,7 +845,7 @@ class Sim:
         return compare_third_part_metal_wire(true_el, true_el_new)
 
     @staticmethod
-    def compare_monogas(json1, json2) -> Mark | None:
+    def compare_monogas(json1, json2) -> Mark:
         gas_class1 = find_meta_value(json1, "Класс газов")
         gas_class2 = find_meta_value(json2, "Класс газов")
 
@@ -865,7 +912,7 @@ class Sim:
                         return Mark.GREEN
 
     @staticmethod
-    def compare_gas_mixture(json1, json2) -> Mark | None:
+    def compare_gas_mixture(json1, json2) -> Mark:
         # Сравнение готовых смесей
         if "link" in json1["successors"][0]:
             gasmix_name_1 = json1["successors"][0]["name"]
