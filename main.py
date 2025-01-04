@@ -2,11 +2,7 @@ import json
 import time
 from typing import Annotated
 
-from src.api_client import (
-    get_with_cache_from_repo,
-    get_without_download_from_repo,
-    get_token_by_current_env_vars,
-)
+from src.api_client import get_with_cache_from_repo
 from src.extract_element_utils import find_meta_value, find_nested_element
 from src.similarity_table.similarity_table import process_similarity_tables
 from src.visualization.visualizate_similarity_table import visualize_data

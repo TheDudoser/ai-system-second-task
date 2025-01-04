@@ -160,11 +160,9 @@ def get_with_cache_from_repo(
     cache_file_path = os.path.join(cache_dir, f"{os.path.basename(path)}.json")
 
     if os.path.exists(cache_file_path):
-        print("cache_file_path exists: ", cache_file_path)
         with open(cache_file_path, "r", encoding="utf-8") as cache_file:
             return parse_nested_json(json.load(cache_file))
 
-    print("fetching data...")
     # Fetch data if not cached
     r = get_data_from_repo(path, token, start_target, json_type, compress, no_blob_data)
     if r.status_code == 200:
