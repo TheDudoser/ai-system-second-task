@@ -2,7 +2,7 @@ import sys
 from collections import Counter
 from typing import Final
 
-from src.api_client import get_without_download_from_repo
+from src.api_client import get_with_cache_from_repo
 from src.element_types.elemental_composition import ElementalComposition
 from src.element_types.interval_type import IntervalType
 from src.element_types.material_for_maintenance import MaterialForMaintenance
@@ -315,16 +315,14 @@ class Sim:
                 #   поэтому страхуемся на такой случай и учитываем link
                 if "link" in elemental_composition:
                     path, start_target = split_path(elemental_composition["link"])
-                    response_el = get_without_download_from_repo(path, token, start_target)
+                    response_el = get_with_cache_from_repo(path, token, start_target)
                     elemental_composition = find_name_value(
                         response_el, elemental_composition["name"]
                     )
 
                 if "link" in elemental_composition_new:
                     path_new, new_start_target = split_path(elemental_composition_new["link"])
-                    new_response_el = get_without_download_from_repo(
-                        path_new, token, new_start_target
-                    )
+                    new_response_el = get_with_cache_from_repo(path_new, token, new_start_target)
                     elemental_composition_new = find_name_value(
                         new_response_el, elemental_composition_new["name"]
                     )
@@ -452,11 +450,11 @@ class Sim:
 
         # Так как в материалах эталонных данных почти ничего и нет, нам нужно вытащить доп информацию из link
         path, start_target = split_path(el["link"])
-        response_el = get_without_download_from_repo(path, token, start_target)
+        response_el = get_with_cache_from_repo(path, token, start_target)
         true_el = find_name_value(response_el, el["name"])
 
         path_new, new_start_target = split_path(el_new["link"])
-        new_response_el = get_without_download_from_repo(path_new, token, new_start_target)
+        new_response_el = get_with_cache_from_repo(path_new, token, new_start_target)
         true_el_new = find_name_value(new_response_el, el_new["name"])
 
         pass_result = Sim.resolve_pass_tz(true_el, true_el_new)
@@ -471,7 +469,7 @@ class Sim:
         # 2. Принадлежность материалов разным классам
         name_el_new = el_new["name"]
         sub_start_target = replace_path_last_part(start_target, name_el_new)
-        new_response_el = get_without_download_from_repo(path, token, sub_start_target)
+        new_response_el = get_with_cache_from_repo(path, token, sub_start_target)
         if find_name_value(new_response_el, name_el_new) is None:
             return Mark.RED
 
@@ -682,11 +680,11 @@ class Sim:
 
         # Так как в материалах эталонных данных почти ничего и нет, нам нужно вытащить доп информацию из link
         path, start_target = split_path(el["link"])
-        response_el = get_without_download_from_repo(path, token, start_target)
+        response_el = get_with_cache_from_repo(path, token, start_target)
         true_el = find_name_value(response_el, el["name"])
 
         path_new, new_start_target = split_path(el_new["link"])
-        new_response_el = get_without_download_from_repo(path_new, token, new_start_target)
+        new_response_el = get_with_cache_from_repo(path_new, token, new_start_target)
         true_el_new = find_name_value(new_response_el, el_new["name"])
 
         pass_result = Sim.resolve_pass_tz(true_el, true_el_new)
@@ -701,7 +699,7 @@ class Sim:
         # 2. Принадлежность материалов разным классам
         name_el_new = el_new["name"]
         sub_start_target = replace_path_last_part(start_target, name_el_new)
-        new_response_el = get_without_download_from_repo(path, token, sub_start_target)
+        new_response_el = get_with_cache_from_repo(path, token, sub_start_target)
         if find_name_value(new_response_el, name_el_new) is None:
             return Mark.RED
 
