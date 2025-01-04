@@ -1,6 +1,6 @@
 import copy
 
-from src.api_client import get_without_download_from_repo
+from src.api_client import get_with_cache_from_repo
 from src.path_utils import split_path
 from src.utils import token
 
@@ -10,7 +10,7 @@ def replace_links_to_dict(*, operation_dict_with_links):
         """Получить объект из репозитория по указанному пути link."""
         path, start_target = split_path(link)
         # Возвращаем только данные из 'data'
-        response = get_without_download_from_repo(path, token, start_target)
+        response = get_with_cache_from_repo(path, token, start_target)
 
         if isinstance(response, str):
             return [{"field": response}]
