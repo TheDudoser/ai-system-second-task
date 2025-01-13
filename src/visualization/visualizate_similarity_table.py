@@ -41,10 +41,11 @@ def _get_color(*, similarity_table, full_path, top_key) -> str:
 
 
 def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
-    def generate_html(*, data, path, top_key, level=0):
+    def generate_html(*, data, path, top_key, level=0, is_open=False):
         """Рекурсивная функция для генерации HTML с раскрывающимися списками.
            Формируем путь из ключа meta."""
         html = ""
+        is_open_str = 'open' if is_open else ''
 
         if isinstance(data, dict):
             for key, value in data.items():
@@ -59,23 +60,25 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
                         full_path = f"{path} | {current_path}"
 
                         color = _get_color(similarity_table=similarity_table, full_path=full_path, top_key=top_key)
+                        is_open = False if color else True
+                        is_open_str = 'open' if is_open else ''
                         style = f"background-color: {color};" if color else ""
 
                         successor_meta = successor.get("meta", "Без мета")
                         meta_title = f"{successor_meta} ({successor.get('name', 'Без названия')})"
-                        html += f"<details>\n<summary style='{style}'>{meta_title}</summary>\n"
+                        html += f"<details {is_open_str}>\n<summary style='{style}'>{meta_title}</summary>\n"
                         # Рекурсивно передаем путь
-                        html += generate_html(data=successor, path=full_path, top_key=top_key, level=level + 1)
+                        html += generate_html(data=successor, path=full_path, top_key=top_key, level=level + 1, is_open=is_open)
                         html += "</details>\n"
                 elif isinstance(value, (dict, list)):
-                    html += f"<details>\n<summary>{key}</summary>\n"
-                    html += generate_html(data=value, path=path, top_key=top_key, level=level + 1)  # Передаем путь
+                    html += f"<details {is_open_str}>\n<summary>{key}</summary>\n"
+                    html += generate_html(data=value, path=path, top_key=top_key, level=level + 1, is_open=False)  # Передаем путь
                     html += "</details>\n"
                 else:
                     html += f"<p><strong>{key}:</strong> {value}</p>\n"
         elif isinstance(data, list):
             for item in data:
-                html += generate_html(data=item, path=path, top_key=top_key, level=level + 1)  # Передаем путь в случае списка
+                html += generate_html(data=item, path=path, top_key=top_key, level=level + 1, is_open=False)  # Передаем путь в случае списка
         else:
             html += f"<p>{data}</p>\n"
 
@@ -112,21 +115,24 @@ p {
 
     operation_name = new_tz_dict['name']
     html += "<div>"
-    html += f"<details>\n<summary>{operation_name} </summary>\n"
+    html += f"<details open>\n<summary>{operation_name} </summary>\n"
     # Путь для первого уровня — это значение из meta
     html += generate_html(data=new_tz_dict, path=operation_name, top_key=operation_name,
-                          level=0)  # Начальный путь = ключ (meta)
+                          level=0, is_open=True)  # Начальный путь = ключ (meta)
     html += "</details>\n"
     html += "</div>"
 
 
     html += "<div>"
     # Генерация контента для каждого ключа в operation_dict
+    is_first = True
     for operation_name, operation_data in operation_dict.items():
-        html += f"<details>\n<summary>{operation_name} ({get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)}%)</summary>\n"
+        html += f"<details {'open' if is_first else ''}>\n<summary>{operation_name} ({get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)}%)</summary>\n"
         # Путь для первого уровня — это значение из meta
-        html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0)  # Начальный путь = ключ (meta)
+        html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0, is_open=is_first)  # Начальный путь = ключ (meta)
         html += "</details>\n"
+
+        is_first = False
 
     # Конец HTML-документа
     html += "</body>\n</html>"
