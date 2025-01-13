@@ -2,6 +2,8 @@ import json
 import time
 from typing import Annotated
 
+from typer.rich_utils import print_with_rich
+
 from src.api_client import get_with_cache_from_repo
 from src.extract_element_utils import find_meta_value, find_nested_element
 from src.similarity_table.similarity_table import process_similarity_tables
@@ -81,6 +83,10 @@ def run_comparison(
     print("Старт сравнения ТЗ...")
     start_time = time.time()
 
+    tz_new_case = find_nested_element(
+        new_case, "name", new_case_path_to_name, "name", tz_meta
+    )
+
     total_sim = 0
     with typer.progressbar(base_operations) as progress:
         for operation in progress:
@@ -88,9 +94,6 @@ def run_comparison(
 
             operation_with_links_dict[operation.get("name")] = operation_tz
 
-            tz_new_case = find_nested_element(
-                new_case, "name", new_case_path_to_name, "name", tz_meta
-            )
             data = Sim.compare(tz=operation_tz, tz_new=tz_new_case)
             result_sim.append({"TO_name": operation.get("name"), "data": data})
             total_sim += 1
@@ -131,9 +134,11 @@ def run_comparison(
 
         operation_dict = replace_links_to_dict(operation_dict_with_links=operation_dict_cropped)
 
+        tz_new_without_links = replace_links_to_dict(operation_dict_with_links=tz_new_case)
+
         print("Старт визуализации...")
         html = visualize_data(
-            similarity_table=similarity_table_cropped, operation_dict=operation_dict
+            similarity_table=similarity_table_cropped, operation_dict=operation_dict, new_tz_dict=tz_new_without_links
         )
         print("Окончание визуализации.")
 

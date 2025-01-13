@@ -40,7 +40,7 @@ def _get_color(*, similarity_table, full_path, top_key) -> str:
     return ""  # Если совпадений не найдено, возвращаем пустую строку
 
 
-def visualize_data(*, similarity_table, operation_dict):
+def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
     def generate_html(*, data, path, top_key, level=0):
         """Рекурсивная функция для генерации HTML с раскрывающимися списками.
            Формируем путь из ключа meta."""
@@ -104,10 +104,23 @@ p {
 }
 </style>
 </head>
-<body>
+<body> 
 <h1>Технические операции</h1>
+<div style="display: flex">
 """
 
+
+    operation_name = new_tz_dict['name']
+    html += "<div>"
+    html += f"<details>\n<summary>{operation_name} </summary>\n"
+    # Путь для первого уровня — это значение из meta
+    html += generate_html(data=new_tz_dict, path=operation_name, top_key=operation_name,
+                          level=0)  # Начальный путь = ключ (meta)
+    html += "</details>\n"
+    html += "</div>"
+
+
+    html += "<div>"
     # Генерация контента для каждого ключа в operation_dict
     for operation_name, operation_data in operation_dict.items():
         html += f"<details>\n<summary>{operation_name} ({get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)}%)</summary>\n"
@@ -117,5 +130,8 @@ p {
 
     # Конец HTML-документа
     html += "</body>\n</html>"
+    html += "</div>"
+    html += "</div>"
+
 
     return html
