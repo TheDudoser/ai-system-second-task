@@ -52,10 +52,8 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
                 if key in ["id", "type", "meta", "name", "valtype", "comment", "original"]:
                     continue  # Пропускаем ненужные ключи
 
-
                 if key == "successors":  # Обрабатываем successors, если есть
                     for successor in value:
-
                         current_path = successor.get("meta")
                         full_path = f"{path} | {current_path}"
 
@@ -68,17 +66,20 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
                         meta_title = f"{successor_meta} ({successor.get('name', 'Без названия')})"
                         html += f"<details {is_open_str}>\n<summary style='{style}'>{meta_title}</summary>\n"
                         # Рекурсивно передаем путь
-                        html += generate_html(data=successor, path=full_path, top_key=top_key, level=level + 1, is_open=is_open)
+                        html += generate_html(data=successor, path=full_path, top_key=top_key, level=level + 1,
+                                              is_open=is_open)
                         html += "</details>\n"
                 elif isinstance(value, (dict, list)):
                     html += f"<details {is_open_str}>\n<summary>{key}</summary>\n"
-                    html += generate_html(data=value, path=path, top_key=top_key, level=level + 1, is_open=False)  # Передаем путь
+                    html += generate_html(data=value, path=path, top_key=top_key, level=level + 1,
+                                          is_open=False)  # Передаем путь
                     html += "</details>\n"
                 else:
                     html += f"<p><strong>{key}:</strong> {value}</p>\n"
         elif isinstance(data, list):
             for item in data:
-                html += generate_html(data=item, path=path, top_key=top_key, level=level + 1, is_open=False)  # Передаем путь в случае списка
+                html += generate_html(data=item, path=path, top_key=top_key, level=level + 1,
+                                      is_open=False)  # Передаем путь в случае списка
         else:
             html += f"<p>{data}</p>\n"
 
@@ -93,6 +94,12 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
 <style>
 body {
     font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.left-column, .right-column {
+    width: 48%;
 }
 details {
     margin-left: 20px;
@@ -105,39 +112,73 @@ summary {
 p {
     margin: 0 0 5px 20px;
 }
+select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 20px;
+}
 </style>
+<script>
+function updateTree(operationName) {
+    var trees = document.getElementsByClassName('operation-tree');
+    for (var i = 0; i < trees.length; i++) {
+        trees[i].style.display = 'none';  // Скрываем все деревья
+    }
+
+    var selectedTree = document.getElementById(operationName);
+    if (selectedTree) {
+        selectedTree.style.display = 'block';  // Показываем выбранное дерево
+    }
+}
+</script>
 </head>
 <body> 
-<h1>Технические операции</h1>
-<div style="display: flex">
-"""
 
+<div class="left-column">"""
 
     operation_name = new_tz_dict['name']
-    html += "<div>"
-    html += f"<details open>\n<summary>{operation_name} </summary>\n"
-    # Путь для первого уровня — это значение из meta
-    html += generate_html(data=new_tz_dict, path=operation_name, top_key=operation_name,
-                          level=0, is_open=True)  # Начальный путь = ключ (meta)
-    html += "</details>\n"
-    html += "</div>"
+
+    html += f'<h2>{operation_name}</h2>'
+    html += f'<details open> <summary>{operation_name}</summary>'
+    html += generate_html(data=new_tz_dict, path=operation_name, top_key=operation_name, level=0, is_open=True)
+    html += '</details>'
+    html += '</div>'
+
+    html += """
+    <div class="right-column">
+    <!-- Выпадающий список -->
+    <h2>Выберите операцию</h2>
+    <select onchange="updateTree(this.value)">
+        <option value="">Выберите операцию</option>
+        """
 
 
-    html += "<div>"
-    # Генерация контента для каждого ключа в operation_dict
+
+    # Добавляем операции в выпадающий список
+    for operation_name, operation_data in operation_dict.items():
+        percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
+        html += f'<option value="{operation_name}">{operation_name} ({percent}%)</option>'
+
+    html += """</select>
+
+    <div>"""
+
+    # Генерация дерева для каждой операции в operation_dict
     is_first = True
     for operation_name, operation_data in operation_dict.items():
-        html += f"<details {'open' if is_first else ''}>\n<summary>{operation_name} ({get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)}%)</summary>\n"
-        # Путь для первого уровня — это значение из meta
-        html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0, is_open=is_first)  # Начальный путь = ключ (meta)
+        percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
+        html += f'<div id="{operation_name}" class="operation-tree" style="display: none;">'  # Идентификатор для отображения
+        html += f"<details {'open' if is_first else ''}>\n<summary>{operation_name} ({percent}%)</summary>\n"
+        html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0,
+                              is_open=is_first)
         html += "</details>\n"
-
+        html += "</div>\n"
         is_first = False
 
     # Конец HTML-документа
+    html += "</div>"
+    html += "</div>"
     html += "</body>\n</html>"
-    html += "</div>"
-    html += "</div>"
-
 
     return html
+
