@@ -130,7 +130,50 @@ function updateTree(operationName) {
         selectedTree.style.display = 'block';  // Показываем выбранное дерево
     }
 
-    console.log(document.querySelectorAll('[data-color]'));
+    // Находим окрашенные элементы в выбранном дереве
+    coloredNodes = selectedTree.querySelectorAll("[data-color]:not([data-color=''])");
+    newTzEl = document.getElementById('new-tz');
+    
+    // Сбрасываем предыдущие цвета в newTzEl
+    coloredTzNodes = newTzEl.querySelectorAll("[data-color]:not([data-color=''])");
+    coloredTzNodes.forEach((elem) => {
+        elem.setAttribute('data-color', '');
+        elem.style.backgroundColor = '';
+    });
+    
+    // Функция для поиска родителя с meta
+    function findParentWithMeta(element) {
+        const parentDetails = element.closest('details');
+        if (parentDetails) {
+            return parentDetails.querySelector('summary');
+        }
+        return null;
+    }
+    
+    // Красим элементы в соответствии с выбранной операцией
+    coloredNodes.forEach((elem) => {
+        const metaValue = elem.getAttribute('data-meta');
+        const colorValue = elem.getAttribute('data-color');
+    
+        // Находим соответствующий элемент в newTzEl
+        let matchingElements = newTzEl.querySelectorAll(`[data-meta="${metaValue}"]`);
+        matchingElements.forEach((matchingElement) => {
+            if (matchingElement) {
+                const parentMatchingElementValue = matchingElement.parentElement.parentElement.querySelector("[data-meta]").getAttribute('data-meta');
+                const parentElementValue = elem.parentElement.parentElement.querySelector("[data-meta]").getAttribute('data-meta');
+                if (parentMatchingElementValue == parentElementValue) {
+                    matchingElement.setAttribute('data-color', colorValue);
+                    matchingElement.style.backgroundColor = colorValue;
+                }
+                else if (parentElementValue == 'Подложка' || parentElementValue == 'Деталь') {
+                    if (parentMatchingElementValue == 'Подложка' || parentMatchingElementValue == 'Деталь') {
+                        matchingElement.setAttribute('data-color', colorValue);
+                        matchingElement.style.backgroundColor = colorValue;
+                    }
+                }
+            }
+        })
+    });
 }
 
 // Вызываем updateTree после загрузки страницы
@@ -149,7 +192,7 @@ window.onload = function() {
     operation_name = new_tz_dict['name']
 
     html += f'<h2>{operation_name}</h2>'
-    html += f'<details open> <summary>{operation_name}</summary>'
+    html += f'<details open id="new-tz"> <summary>{operation_name}</summary>'
     html += generate_html(data=new_tz_dict, path=operation_name, top_key=operation_name, level=0, is_open=True)
     html += '</details>'
     html += '</div>'
@@ -159,7 +202,6 @@ window.onload = function() {
     <!-- Выпадающий список -->
     <h2>Выберите операцию</h2>
     <select onchange="updateTree(this.value)">
-        <option value="">Выберите операцию</option>
         """
 
 
@@ -180,7 +222,7 @@ window.onload = function() {
     for operation_name, operation_data in operation_dict.items():
         percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
         html += f'<div id="{operation_name}" class="operation-tree" style="display: none;">'  # Идентификатор для отображения
-        html += f"<details {'open' if is_first else ''}>\n<summary>{operation_name} ({percent}%)</summary>\n"
+        html += f"<details open>\n<summary>{operation_name} ({percent}%)</summary>\n"
         html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0,
                               is_open=is_first)
         html += "</details>\n"
