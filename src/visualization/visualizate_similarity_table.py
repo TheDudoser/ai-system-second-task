@@ -64,7 +64,7 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
 
                         successor_meta = successor.get("meta", "Без мета")
                         meta_title = f"{successor_meta} ({successor.get('name', 'Без названия')})"
-                        html += f"<details {is_open_str}>\n<summary style='{style}'>{meta_title}</summary>\n"
+                        html += f"<details {is_open_str}>\n<summary style='{style}' data-color='{color}' data-meta='{successor_meta}'>{meta_title}</summary>\n"
                         # Рекурсивно передаем путь
                         html += generate_html(data=successor, path=full_path, top_key=top_key, level=level + 1,
                                               is_open=is_open)
@@ -129,7 +129,17 @@ function updateTree(operationName) {
     if (selectedTree) {
         selectedTree.style.display = 'block';  // Показываем выбранное дерево
     }
+
+    console.log(document.querySelectorAll('[data-color]'));
 }
+
+// Вызываем updateTree после загрузки страницы
+window.onload = function() {
+    var selectElement = document.querySelector('select');
+    if (selectElement) {
+        updateTree(selectElement.value);  // Передаем текущее значение select
+    }
+};
 </script>
 </head>
 <body> 
@@ -155,9 +165,11 @@ function updateTree(operationName) {
 
 
     # Добавляем операции в выпадающий список
+    is_first = True
     for operation_name, operation_data in operation_dict.items():
         percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
-        html += f'<option value="{operation_name}">{operation_name} ({percent}%)</option>'
+        html += f'<option value="{operation_name}" {'selected' if is_first else ''}>{operation_name} ({percent}%)</option>'
+        is_first = False
 
     html += """</select>
 
