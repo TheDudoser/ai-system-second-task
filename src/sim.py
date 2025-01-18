@@ -47,6 +47,10 @@ class Sim:
         el_analogues = extract_names_by_meta_iterative(el, Material.ANALOGUES)
         el_new_analogues = extract_names_by_meta_iterative(el_new, Material.ANALOGUES)
 
+        pass_analogues = Sim.resolve_pass_tz(el_analogues, el_new_analogues)
+        if isinstance(pass_analogues, Mark):
+            return pass_analogues
+
         if name_el in el_new_analogues or name_el_new in el_analogues:
             return Mark.GREEN
         else:
