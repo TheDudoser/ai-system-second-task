@@ -72,8 +72,6 @@ class TestSim(unittest.TestCase):
         self.assertEqual(Mark.GREEN, Sim.compare_materials(tz, tz))
 
     def test_materials_detail(self):
-        # TODO: Наплавка на основе Олова, сказали что добавили рабочую поверхность
-        # TODO: Уточнения требований от Вадима
         pass
     ###< materials ###
 
@@ -138,7 +136,7 @@ class TestSim(unittest.TestCase):
     ###< Металлический порошок ###
 
     ###> Металлическая проволока ###
-    # TODO: Нет тестов, потому что у ДВО РАН сейчас есть только онтология (структура),
+    # Нет тестов, потому что у ДВО РАН сейчас есть только онтология (структура),
     #   а мы тянем link и подставить своё я не могу из-за этого...
     def test_compare_metal_wire(self):
         pass

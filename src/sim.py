@@ -219,7 +219,6 @@ class Sim:
             monogas_parent_new = find_name_value_endswith(pg_new["successors"][0], ProcessGas.GAS)
 
             # Для газовых смесей аналогично, как и с моногазом костыли на костылях из-за отсутствия данных...
-            # TODO: Возможно, немного переделать нужно будет
             gas_mixture_parent = find_name_value_endswith(
                 pg["successors"][0], ProcessGas.GAS_MIXTURE
             )
@@ -740,8 +739,7 @@ class Sim:
             # Конец хитрого вытаскивания
 
             # 3.2. Подобие методов получения
-            # TODO: Метод получения в онтологии не описан какой вид имеет (в примерах он с пустым содержанием)...
-            #   Поэтому, пока предусматриваем ситуацию когда его нет
+            # На всякий случай предусматриваем ситуацию когда его нет, т.к. сейчас он никогда не приходит
             if not find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING):
                 method_similarity = Mark.RED
             else:
@@ -777,8 +775,7 @@ class Sim:
                     particle_size_new, MetalPowder.MIN_MAX_PARTICLE_SIZE
                 )
 
-                # TODO: И опять ситуация, когда что-то пустое.
-                #  Вернее пример есть, но он ссылается на "Онтология описания характеристик и их значений", которая максимально непонятная...)
+                # Снова ситуация, когда что-то пустое
                 if min_max_particle_size is None:
                     size_similarity = Mark.RED
                 else:
