@@ -157,7 +157,9 @@ def get_with_cache_from_repo(
     """
     os.makedirs(cache_dir, exist_ok=True)
 
-    cache_file_path = os.path.join(cache_dir, f"{os.path.basename(path)}.json")
+    full_path = path + start_target
+
+    cache_file_path = os.path.join(cache_dir, f"{os.path.basename(full_path)}.json")
 
     if os.path.exists(cache_file_path):
         with open(cache_file_path, "r", encoding="utf-8") as cache_file:
