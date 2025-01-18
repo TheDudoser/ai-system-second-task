@@ -486,6 +486,10 @@ class Sim:
         osnov_1 = find_meta_value(json1, ElementalComposition.BASE)
         osnov_2 = find_meta_value(json2, ElementalComposition.BASE)
 
+        pass_result = Sim.resolve_pass_tz(osnov_1, osnov_2)
+        if not isinstance(pass_result, list):
+            return pass_result
+
         values_1 = [item["value"] for item in osnov_1["successors"]]
         values_2 = [item["value"] for item in osnov_2["successors"]]
 
