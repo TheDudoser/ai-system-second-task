@@ -157,7 +157,7 @@ def get_with_cache_from_repo(
     """
     os.makedirs(cache_dir, exist_ok=True)
 
-    full_path = path + start_target
+    full_path = os.path.basename(path) + os.path.basename(start_target)
 
     cache_file_path = os.path.join(cache_dir, f"{os.path.basename(full_path)}.json")
 
