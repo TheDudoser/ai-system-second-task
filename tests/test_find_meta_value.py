@@ -8,6 +8,3 @@ class TestFindMetaValue(unittest.TestCase):
         tz = load_fixture("geometrical_characteristics/tz.json")
         self.assertEqual(find_name_value(tz, 'Геометрические характеристики'), find_meta_value(tz, 'Геометрические характеристики'))
 
-    def test_substrate(self):
-        tz
-

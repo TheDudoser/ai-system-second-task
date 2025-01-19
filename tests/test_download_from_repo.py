@@ -29,8 +29,3 @@ class TestDownloadFromRepo(unittest.TestCase):
 
         data = get_without_download_from_repo(example_path, self.__token, '/Сплавы на основе железа/Сталь марки РС категории А')
         self.assertIsNotNone(data)
-
-    def test_test(self):
-        example_path = 'Загрузки / Онтология архива протоколов технологических операций лазерной обработки'
-
-        print (get_without_download_from_repo(example_path, self.__token))
