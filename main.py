@@ -136,6 +136,10 @@ def run_comparison(
 
         tz_new_without_links = replace_links_to_dict(operation_dict_with_links=tz_new_case)
 
+        # Добавляем рандомное название операции, чтобы соответствовать требованию отображения
+        random_name_meta = "Операция нового ТЗ"
+        tz_new_without_links = {"name": random_name_meta, "meta": random_name_meta, "successors": [tz_new_without_links]}
+
         print("Старт визуализации...")
         html = visualize_data(
             similarity_table=similarity_table_cropped, operation_dict=operation_dict, new_tz_dict=tz_new_without_links
