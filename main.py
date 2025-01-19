@@ -138,7 +138,7 @@ def run_comparison(
 
         # Добавляем рандомное название операции, чтобы соответствовать требованию отображения
         random_name_meta = "Операция нового ТЗ"
-        tz_new_without_links = {"name": random_name_meta, "meta": random_name_meta, "successors": [tz_new_without_links]}
+        tz_new_without_links = {"name": random_name_meta, "meta": random_name_meta, "successors": [tz_new_without_links] if tz_new_without_links else []}
 
         print("Старт визуализации...")
         html = visualize_data(
