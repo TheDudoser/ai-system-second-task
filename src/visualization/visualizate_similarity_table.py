@@ -1,7 +1,7 @@
 
-def get_percent_similarity(*, operation_name, similarity_table) -> str:
+def get_percent_similarity(*, operation_name, similarity_table, is_euklid) -> str:
     finded_data = next((entry for entry in similarity_table if entry.get("TO_name") == operation_name), None)
-    return finded_data.get("data").get("%d1")
+    return finded_data.get("data").get("%d1" if not is_euklid else "%d2")
 
 
 def _get_color(*, similarity_table, full_path, top_key) -> str:
@@ -40,7 +40,7 @@ def _get_color(*, similarity_table, full_path, top_key) -> str:
     return ""  # Если совпадений не найдено, возвращаем пустую строку
 
 
-def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
+def visualize_data(*, similarity_table, operation_dict, new_tz_dict, is_euklid):
     def generate_html(*, data, path, top_key, level=0, is_open=False):
         """Рекурсивная функция для генерации HTML с раскрывающимися списками.
            Формируем путь из ключа meta."""
@@ -221,7 +221,7 @@ window.onload = function() {
     # Добавляем операции в выпадающий список
     is_first = True
     for operation_name, operation_data in operation_dict.items():
-        percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
+        percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table, is_euklid=is_euklid)
         html += f'<option value="{operation_name}" {'selected' if is_first else ''}>{operation_name} ({percent}%)</option>'
         is_first = False
 
@@ -232,7 +232,7 @@ window.onload = function() {
     # Генерация дерева для каждой операции в operation_dict
     is_first = True
     for operation_name, operation_data in operation_dict.items():
-        percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
+        percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table, is_euklid=is_euklid)
         html += f'<div id="{operation_name}" class="operation-tree" style="display: none;" data-is-first={int(is_first)}>'  # Идентификатор для отображения
         html += f"<details open>\n<summary>{operation_name} (<strong>{percent}%</strong>)</summary>\n"
         html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0,

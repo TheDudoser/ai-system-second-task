@@ -9,7 +9,7 @@ from src.extract_element_utils import find_meta_value, find_nested_element
 from src.similarity_table.similarity_table import process_similarity_tables
 from src.visualization.visualizate_similarity_table import visualize_data
 from src.services.replace_links import replace_links_to_dict
-from src.services.d1_filter_and_match import filter_by_d1_and_get_matching_objects
+from src.services.method_filter_and_match import filter_by_method_and_get_matching_objects
 from src.sim import Sim
 from src.utils import token
 import typer
@@ -52,6 +52,10 @@ def run_comparison(
         bool,
         typer.Option(help="Использовать API для загрузки данных?"),
     ] = True,
+    is_euklid: Annotated[
+        bool,
+        typer.Option(help="Использовать Евклид для схожести?"),
+    ] = False,
 ):
     if use_api:
         print("Получение данных с API...")
@@ -128,8 +132,8 @@ def run_comparison(
         with open("operation_with_links_dict.json", "w", encoding="utf-8") as f:
             json.dump(operation_with_links_dict, f, ensure_ascii=False, indent=4)
 
-        similarity_table_cropped, operation_dict_cropped = filter_by_d1_and_get_matching_objects(
-            similarity_table=similarity_table, operation_dict=operation_with_links_dict
+        similarity_table_cropped, operation_dict_cropped = filter_by_method_and_get_matching_objects(
+            similarity_table=similarity_table, operation_dict=operation_with_links_dict, is_euklid=is_euklid
         )
 
         operation_dict = replace_links_to_dict(operation_dict_with_links=operation_dict_cropped)
@@ -142,7 +146,7 @@ def run_comparison(
 
         print("Старт визуализации...")
         html = visualize_data(
-            similarity_table=similarity_table_cropped, operation_dict=operation_dict, new_tz_dict=tz_new_without_links
+            similarity_table=similarity_table_cropped, operation_dict=operation_dict, new_tz_dict=tz_new_without_links, is_euklid=is_euklid
         )
         print("Окончание визуализации.")
 
