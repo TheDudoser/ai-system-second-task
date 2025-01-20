@@ -60,7 +60,7 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict):
                         color = _get_color(similarity_table=similarity_table, full_path=full_path, top_key=top_key)
                         is_open = False if color else True
                         is_open_str = 'open' if is_open else ''
-                        style = f"background-color: {color};" if color else ""
+                        style = f"color: {color}; font-weight: bold;" if color else ""
 
                         successor_meta = successor.get("meta", "Без мета")
                         meta_title = f"{successor_meta} ({successor.get('name', 'Без названия')})"
@@ -106,7 +106,7 @@ details {
 }
 summary {
     cursor: pointer;
-    font-weight: bold;
+    font-weight: initial;
     margin: 5px 0;
 }
 p {
@@ -138,7 +138,8 @@ function updateTree(operationName) {
     coloredTzNodes = newTzEl.querySelectorAll("[data-color]:not([data-color=''])");
     coloredTzNodes.forEach((elem) => {
         elem.setAttribute('data-color', '');
-        elem.style.backgroundColor = '';
+        elem.style.color = '';
+        elem.style.fontWeight = 'initial';
     });
     
     // Функция для поиска родителя с meta
@@ -161,14 +162,25 @@ function updateTree(operationName) {
             if (matchingElement) {
                 const parentMatchingElementValue = matchingElement.parentElement.parentElement.querySelector("[data-meta]").getAttribute('data-meta');
                 const parentElementValue = elem.parentElement.parentElement.querySelector("[data-meta]").getAttribute('data-meta');
-                if (parentMatchingElementValue == parentElementValue) {
+
+                // Когда нет родителя у операции, значит не проверяем родителей
+                if (elem.parentElement.parentElement.parentElement.getAttribute('data-is-first')) {
                     matchingElement.setAttribute('data-color', colorValue);
-                    matchingElement.style.backgroundColor = colorValue;
+                    matchingElement.style.color = colorValue;
+                    matchingElement.style.fontWeight = 'bold';
                 }
+                // Обычная ситуация покраски
+                else if (parentMatchingElementValue == parentElementValue) {
+                    matchingElement.setAttribute('data-color', colorValue);
+                    matchingElement.style.color = colorValue;
+                    matchingElement.style.fontWeight = 'bold';
+                }
+                // Костыль покраски Дефектов/Подложек
                 else if (parentElementValue == 'Подложка' || parentElementValue == 'Деталь') {
                     if (parentMatchingElementValue == 'Подложка' || parentMatchingElementValue == 'Деталь') {
                         matchingElement.setAttribute('data-color', colorValue);
-                        matchingElement.style.backgroundColor = colorValue;
+                        matchingElement.style.color = colorValue;
+                        matchingElement.style.fontWeight = 'bold';
                     }
                 }
             }
@@ -221,8 +233,8 @@ window.onload = function() {
     is_first = True
     for operation_name, operation_data in operation_dict.items():
         percent = get_percent_similarity(operation_name=operation_name, similarity_table=similarity_table)
-        html += f'<div id="{operation_name}" class="operation-tree" style="display: none;">'  # Идентификатор для отображения
-        html += f"<details open>\n<summary>{operation_name} ({percent}%)</summary>\n"
+        html += f'<div id="{operation_name}" class="operation-tree" style="display: none;" data-is-first={int(is_first)}>'  # Идентификатор для отображения
+        html += f"<details open>\n<summary>{operation_name} (<strong>{percent}%</strong>)</summary>\n"
         html += generate_html(data=operation_data, path=operation_name, top_key=operation_name, level=0,
                               is_open=is_first)
         html += "</details>\n"
