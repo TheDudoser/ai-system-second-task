@@ -76,7 +76,7 @@ def run_comparison(
         with open(path, "r", encoding="utf-8") as f:
             base = json.load(f)
 
-    new_case_path_to_name = path.split("/")[-1]
+    operation_new_case = extract_operations_with_meta(new_case, "Технологическая операция")[0]
     base_operations = extract_operations_with_meta(base, "Технологическая операция")
     tz_meta = "Техническое задание на выполнение технологической операции"
     result_sim = []
@@ -85,14 +85,11 @@ def run_comparison(
     print("Старт сравнения ТЗ...")
     start_time = time.time()
 
-    tz_new_case = find_nested_element(
-        new_case, "name", new_case_path_to_name, "name", tz_meta
-    )
-
     total_sim = 0
     with typer.progressbar(base_operations) as progress:
         for operation in progress:
             operation_tz = find_meta_value(operation, tz_meta)
+            tz_new_case = find_meta_value(operation_new_case, tz_meta)
 
             operation_with_links_dict[operation.get("name")] = operation_tz
 
@@ -139,7 +136,7 @@ def run_comparison(
         tz_new_without_links = replace_links_to_dict(operation_dict_with_links=tz_new_case)
 
         # Добавляем рандомное название операции, чтобы соответствовать требованию отображения
-        random_name_meta = "Операция нового ТЗ"
+        random_name_meta = operation_new_case.get("name")
         tz_new_without_links = {"name": random_name_meta, "meta": random_name_meta, "successors": [tz_new_without_links] if tz_new_without_links else []}
 
         print("Старт визуализации...")
