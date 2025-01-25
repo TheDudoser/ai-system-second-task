@@ -145,6 +145,7 @@ def get_with_cache_from_repo(
     compress: bool = False,
     no_blob_data: bool = True,
     cache_dir: str = "cache",
+    is_print_debug_message = False
 ):
     """
     Get data from iacpass repository, downloading only if not already cached.
@@ -153,6 +154,7 @@ def get_with_cache_from_repo(
     :param compress: ...
     :param no_blob_data: ...
     :param cache_dir: Directory to store cached files
+    :param is_print_debug_message: ...
     :return: Parsed JSON data
     """
     os.makedirs(cache_dir, exist_ok=True)
@@ -163,17 +165,28 @@ def get_with_cache_from_repo(
 
     if os.path.exists(cache_file_path):
         with open(cache_file_path, "r", encoding="utf-8") as cache_file:
-            return parse_nested_json(json.load(cache_file))
+            parsed_json = parse_nested_json(json.load(cache_file))
+            if is_print_debug_message:
+                print(f"Данные были прочитаны из кэша '{cache_file.name}'")
+            return parsed_json
 
     # Fetch data if not cached
+    if is_print_debug_message:
+        print(f"Получение данных по API для path: {path}, start_target: {start_target}")
     r = get_data_from_repo(path, token, start_target, json_type, compress, no_blob_data)
     if r.status_code == 200:
         response_json = r.json()
         parsed_data = parse_nested_json(response_json)
 
+        if is_print_debug_message:
+            print("Данные с API получены")
+
         # Caching...
         with open(cache_file_path, "w", encoding="utf-8") as cache_file:
             json.dump(parsed_data, cache_file, indent=2, ensure_ascii=False)
+
+        if is_print_debug_message:
+            print("Кэш полученных с API данных сохранён")
 
         return parsed_data
     else:

@@ -56,16 +56,16 @@ def run_comparison(
     ] = False,
 ):
     if use_api:
-        print("Получение данных с API...")
+        print("Получение данных о ТО и новом ТЗ...")
         start_time = time.time()
 
-        new_case = get_with_cache_from_repo(new_case_path, token)
-        base = get_with_cache_from_repo(path, token)
+        new_case = get_with_cache_from_repo(path=new_case_path, token=token, is_print_debug_message=True)
+        base = get_with_cache_from_repo(path=path, token=token, is_print_debug_message=True)
 
         end_time = time.time()
         total_time = end_time - start_time
         print(
-            "Данные с API получены. Время обращения к API: {total_time}сек.".format(
+            "Время получения данных к API: {total_time}сек.".format(
                 total_time=round(total_time)
             )
         )
