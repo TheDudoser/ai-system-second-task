@@ -2,8 +2,6 @@ import json
 import time
 from typing import Annotated
 
-from typer.rich_utils import print_with_rich
-
 from src.api_client import get_with_cache_from_repo
 from src.extract_element_utils import find_meta_value, find_nested_element
 from src.similarity_table.similarity_table import process_similarity_tables
