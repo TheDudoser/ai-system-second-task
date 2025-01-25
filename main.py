@@ -12,7 +12,7 @@ from src.sim import Sim
 from src.utils import token
 import typer
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False)
 
 
 def extract_operations_with_meta(data, target_meta):
