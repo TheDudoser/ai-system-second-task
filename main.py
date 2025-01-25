@@ -78,6 +78,7 @@ def run_comparison(
 
     operation_new_case = extract_operations_with_meta(new_case, "Технологическая операция")[0]
     base_operations = extract_operations_with_meta(base, "Технологическая операция")
+    base_operations = [operation for operation in base_operations if operation.get("name") == "Класс процессов лазерной обработки"]
     tz_meta = "Техническое задание на выполнение технологической операции"
     result_sim = []
     operation_with_links_dict = {}
@@ -151,6 +152,8 @@ def run_comparison(
             print(
                 "Файл с визуализацией сохранён в {filename}".format(filename=visualization_filename)
             )
+    else:
+        print("Результат сравнения пустой, результаты операций не были перезаписаны")
 
 
 if __name__ == "__main__":
