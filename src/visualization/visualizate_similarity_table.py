@@ -63,7 +63,10 @@ def visualize_data(*, similarity_table, operation_dict, new_tz_dict, is_euklid):
                         style = f"color: {color}; font-weight: bold;" if color else ""
 
                         successor_meta = successor.get("meta", "Без мета")
-                        meta_title = f"{successor_meta} ({successor.get('name', 'Без названия')})"
+                        # Не отображаем (name) если meta == name и если пустое
+                        title = ((f"({successor.get("meta")})" if successor.get("name") != successor.get("meta") else '') if successor.get('meta') else '')
+                        #
+                        meta_title = f"{successor.get('name')} {title}"
                         html += f"<details {is_open_str}>\n<summary style='{style}' data-color='{color}' data-meta='{successor_meta}'>{meta_title}</summary>\n"
                         # Рекурсивно передаем путь
                         html += generate_html(data=successor, path=full_path, top_key=top_key, level=level + 1,
