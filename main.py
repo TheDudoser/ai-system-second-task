@@ -3,7 +3,7 @@ import time
 from typing import Annotated
 
 from src.api_client import get_with_cache_from_repo
-from src.extract_element_utils import find_meta_value, find_nested_element
+from src.extract_element_utils import find_meta_value, find_nested_element, find_name_value
 from src.similarity_table.similarity_table import process_similarity_tables
 from src.visualization.visualizate_similarity_table import visualize_data
 from src.services.replace_links import replace_links_to_dict
@@ -76,8 +76,13 @@ def run_comparison(
         with open(path, "r", encoding="utf-8") as f:
             base = json.load(f)
 
-    operation_new_case = extract_operations_with_meta(new_case, "Технологическая операция")[0]
+    new_case_path_to_name = new_case_path.split("/")[-1]
+    operation_new_case = find_name_value(new_case, new_case_path_to_name)
+    if not operation_new_case.get("meta") == "Технологическая операция":
+        operation_new_case = find_meta_value(operation_new_case, "Технологическая операция")
 
+    # API тянет вообще всё, поэтому обрезаем только до нужного
+    base = find_name_value(base, path.split("/")[-1])
     # Оставляем только операции определённого класса
     base_filtered = find_meta_value(base, "Класс процессов лазерной обработки")
     if not base_filtered:
