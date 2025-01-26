@@ -166,9 +166,17 @@ def get_with_cache_from_repo(
     if os.path.exists(cache_file_path):
         with open(cache_file_path, "r", encoding="utf-8") as cache_file:
             parsed_json = parse_nested_json(json.load(cache_file))
-            if is_print_debug_message:
-                print(f"Данные были прочитаны из кэша '{cache_file.name}'")
-            return parsed_json
+
+        # Отладочное сообщение
+        if is_print_debug_message:
+            print(f"Данные были прочитаны из кэша '{cache_file.name}'")
+
+        # Предусматриваем, что кэш может быть сохранён с ответом в виде ошибки от API (для обратной совместимости)
+        if parsed_json.get('error'):
+            os.remove(cache_file_path)
+            raise Exception(f"Ошибка во время получения {path}\nОтвет API: {parsed_json.get('error')}")
+
+        return parsed_json
 
     # Fetch data if not cached
     if is_print_debug_message:
@@ -177,6 +185,10 @@ def get_with_cache_from_repo(
     if r.status_code == 200:
         response_json = r.json()
         parsed_data = parse_nested_json(response_json)
+
+        # Предусматриваем, что ответ может быть получен с ошибкой
+        if parsed_data.get('error'):
+            raise Exception(f"Ошибка во время получения {path}\nОтвет API: {parsed_data.get('error')}")
 
         if is_print_debug_message:
             print("Данные с API получены")
