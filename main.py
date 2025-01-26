@@ -77,8 +77,13 @@ def run_comparison(
             base = json.load(f)
 
     operation_new_case = extract_operations_with_meta(new_case, "Технологическая операция")[0]
+
+    # Оставляем только операции определённого класса
+    base_filtered = find_meta_value(base, "Класс процессов лазерной обработки")
+    if not base_filtered:
+        raise Exception(f"{path} не принадлежит классу 'Класс процессов лазерной обработки'. Мы работаем только с этим классом.")
     base_operations = extract_operations_with_meta(base, "Технологическая операция")
-    base_operations = [operation for operation in base_operations if operation.get("name") == "Класс процессов лазерной обработки"]
+
     tz_meta = "Техническое задание на выполнение технологической операции"
     result_sim = []
     operation_with_links_dict = {}
