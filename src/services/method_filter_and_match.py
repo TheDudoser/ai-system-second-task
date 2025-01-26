@@ -3,8 +3,6 @@ def filter_by_method_and_get_matching_objects(similarity_table, operation_dict, 
     filtered_table1 = []
     percentage = 60
 
-    for table_name, table_data in similarity_table.items():
-        similarity_table[table_name] = sorted(table_data, key=lambda x: x['data']['%d1'])
 
     for item in similarity_table["Table1" if not is_euklid else "Table2"]:
         if item["data"].get("%d1" if not is_euklid else "%d2", 0) >= percentage:
@@ -18,7 +16,11 @@ def filter_by_method_and_get_matching_objects(similarity_table, operation_dict, 
     # Извлекаем имена (TO_name) из выбранных объектов
     selected_names = [item["TO_name"] for item in filtered_table1]
 
-    # Обрезаем второй словарь, оставляем только те элементы, чьи имена из selected_names
-    filtered_table2 = {key: value for key, value in operation_dict.items() if key in selected_names}
+    filtered_table2 = {}
+
+    for key in selected_names:
+        if key in operation_dict:
+            filtered_table2[key] = operation_dict[key]
+
 
     return filtered_table1, filtered_table2
