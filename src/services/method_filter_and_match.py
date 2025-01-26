@@ -1,7 +1,7 @@
 def filter_by_method_and_get_matching_objects(similarity_table, operation_dict, is_euklid):
     # Функция для фильтрации объектов по значению %d1
     filtered_table1 = []
-    percentage = 0
+    percentage = 60
 
     for table_name, table_data in similarity_table.items():
         similarity_table[table_name] = sorted(table_data, key=lambda x: x['data']['%d1'])
