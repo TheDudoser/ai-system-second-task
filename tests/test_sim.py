@@ -1,7 +1,12 @@
 import unittest
+
+from mock.mock import patch
+
+import src.api_client as api_client
 from src.sim import Sim
 from src.mark import Mark
 from tests.utils import load_fixture
+from mock import Mock
 
 
 class TestSim(unittest.TestCase):
@@ -29,6 +34,7 @@ class TestSim(unittest.TestCase):
         tz = load_fixture("geometrical_characteristics/tz.json")
         tz_pass = load_fixture("geometrical_characteristics/tz_pass.json")
         self.assertEqual(Mark.GREEN, Sim.compare_geometrical_characteristics(tz, tz_pass))
+
     ###< geometrical_characteristics ###
 
     ###> defects ###
@@ -55,6 +61,7 @@ class TestSim(unittest.TestCase):
         tz = load_fixture("defects/tz.json")
         tz_orange = load_fixture("defects/tz_orange.json")
         self.assertEqual(Mark.ORANGE, Sim.compare_defects(tz, tz_orange))
+
     ###< defects ###
 
     ###> materials ###
@@ -69,18 +76,28 @@ class TestSim(unittest.TestCase):
 
     def test_materials_in_class(self):
         tz = load_fixture("materials/tz.json")
-        self.assertEqual(Mark.GREEN, Sim.compare_materials(tz, tz))
+
+        with patch(
+                'src.sim.get_with_cache_from_repo',
+                return_value=load_fixture("from_api/Справочник по материаламСталь марки РС категории А.json")
+        ):
+            self.assertEqual(Mark.GREEN, Sim.compare_materials(tz, tz))
 
     def test_materials_detail(self):
         pass
+
     ###< materials ###
 
     ###> mass ###
     def test_mass_one_interval(self):
         # 1 пункт
-        tz_first_interval = load_fixture("mass/tz_first_interval.json")
-        tz_new_first_interval = load_fixture("mass/tz_new_first_interval.json")
-        self.assertEqual(Mark.GREEN, Sim.compare_materials(tz_first_interval, tz_new_first_interval))
+        with patch(
+                'src.sim.get_with_cache_from_repo',
+                return_value=load_fixture("from_api/Справочник по материаламСталь марки РС категории А.json")
+        ):
+            tz_first_interval = load_fixture("mass/tz_first_interval.json")
+            tz_new_first_interval = load_fixture("mass/tz_new_first_interval.json")
+            self.assertEqual(Mark.GREEN, Sim.compare_materials(tz_first_interval, tz_new_first_interval))
 
         tz_fifth_interval = load_fixture("mass/tz_fifth_interval.json")
         tz_new_fifth_interval = load_fixture("mass/tz_new_fifth_interval.json")
@@ -114,6 +131,7 @@ class TestSim(unittest.TestCase):
         tz_value_300 = load_fixture("mass/tz_value_300.json")
 
         self.assertEqual(Mark.RED, Sim.compare_mass(tz_value_20, tz_value_300))
+
     ###< mass ###
 
     ###> Подобие элементных составов ###
@@ -126,6 +144,7 @@ class TestSim(unittest.TestCase):
         tz = load_fixture("elemental_composition/St3sp.json")
         tz_new = load_fixture("elemental_composition/12X18H10T.json")
         self.assertEqual(Mark.RED, Sim.elemental_composition_compare(tz, tz_new))
+
     ###< Подобие элементных составов ###
 
     ###> Металлический порошок ###
@@ -133,6 +152,7 @@ class TestSim(unittest.TestCase):
     def test_compare_metal_powder(self):
         tz = load_fixture("metal_powders/default.json")
         self.assertEqual(Mark.RED, Sim.compare_metal_powder(tz, tz))
+
     ###< Металлический порошок ###
 
     ###> Металлическая проволока ###
@@ -140,6 +160,7 @@ class TestSim(unittest.TestCase):
     #   а мы тянем link и подставить своё я не могу из-за этого...
     def test_compare_metal_wire(self):
         pass
+
     ###< Металлическая проволока ###
 
     ###> Моногаз ###
