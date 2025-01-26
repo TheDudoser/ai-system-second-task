@@ -60,7 +60,10 @@ def run_comparison(
         start_time = time.time()
 
         new_case = get_with_cache_from_repo(path=new_case_path, token=token, is_print_debug_message=True)
-        base = get_with_cache_from_repo(path=path, token=token, is_print_debug_message=True)
+
+        path_new = '/'.join(path.split("/")[0:2])
+        start_target = "/" + '/'.join(path.split("/")[2:])
+        base = get_with_cache_from_repo(path=path_new, start_target=start_target, token=token, is_print_debug_message=True)
 
         end_time = time.time()
         total_time = end_time - start_time
@@ -81,8 +84,6 @@ def run_comparison(
     if not operation_new_case.get("meta") == "Технологическая операция":
         operation_new_case = find_meta_value(operation_new_case, "Технологическая операция")
 
-    # API тянет вообще всё, поэтому обрезаем только до нужного
-    base = find_name_value(base, path.split("/")[-1])
     # Оставляем только операции определённого класса
     base_filtered = find_meta_value(base, "Класс процессов лазерной обработки")
     if not base_filtered:
