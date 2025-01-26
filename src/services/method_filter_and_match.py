@@ -1,5 +1,3 @@
-import numpy as np
-
 def filter_by_method_and_get_matching_objects(similarity_table, operation_dict, is_euklid):
     # Функция для фильтрации объектов по значению %d1
     filtered_table1 = []
@@ -8,7 +6,6 @@ def filter_by_method_and_get_matching_objects(similarity_table, operation_dict, 
     for table_name, table_data in similarity_table.items():
         similarity_table[table_name] = sorted(table_data, key=lambda x: x['data']['%d1'])
 
-    print(similarity_table)
     for item in similarity_table["Table1" if not is_euklid else "Table2"]:
         if item["data"].get("%d1" if not is_euklid else "%d2", 0) >= percentage:
             filtered_table1.append(item)
