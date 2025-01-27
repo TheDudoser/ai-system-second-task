@@ -13,7 +13,7 @@ class Interval:
 
     # Проверка включения одного интервала в другой
     def contains_interval(self, other):
-        return self.left <= other.left and self.right >= other.right
+        return (self.left <= other.left and self.right >= other.right) or (other.left <= self.left and other.right >= self.right)
 
     # Проверка совпадения двух интервалов
     def __eq__(self, other):

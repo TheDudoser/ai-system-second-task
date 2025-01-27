@@ -559,7 +559,7 @@ class Sim:
                                     float(top_border_2["successors"][0]["value"]),
                                 )
 
-                                if interval_1.contains_interval(interval_2):
+                                if interval_1.contains_interval(interval_2) or interval_2.contains_interval(interval_1):
                                     green_counter += 1
 
                             # 3.2
@@ -589,6 +589,28 @@ class Sim:
                                     if interval_1.contains_interval(interval_2):
                                         green_counter += 1
 
+                                elif not_bigger_2 is not None:
+                                    interval_value_2 = find_meta_value(
+                                        not_bigger_2["successors"], "Числовое значение"
+                                    )
+
+                                    interval_2 = Interval(0.0, float(interval_value_2["value"]))
+
+                                    low_border_1 = find_meta_value(
+                                        number_interval_1, IntervalType.LOW_BORDER
+                                    )
+                                    top_border_1 = find_meta_value(
+                                        number_interval_1, IntervalType.TOP_BORDER
+                                    )
+
+                                    interval_1 = Interval(
+                                        float(low_border_1["successors"][0]["value"]),
+                                        float(top_border_1["successors"][0]["value"]),
+                                    )
+
+                                    if interval_2.contains_interval(interval_1):
+                                        green_counter += 1
+
                             elif not_bigger_1 is not None and not_bigger_2 is not None:  # 3.3
                                 interval_value_2 = find_meta_value(
                                     chim_element_2["successors"], "Числовое значение"
@@ -597,8 +619,13 @@ class Sim:
                                     chim_element_1["successors"], "Числовое значение"
                                 )
 
-                                if interval_value_1 == interval_value_2:
+                                interval_1 = Interval(0.0, float(interval_value_1["value"]))
+                                interval_2 = Interval(0.0, float(interval_value_2["value"]))
+
+                                if interval_1 == interval_2:
                                     green_counter += 1
+                            else: # Ситуация, не попадающая ни в один из случаев, писанных в требованиях. Считаем пропуском
+                                green_counter += 1
 
             if green_counter / pair_counter >= 0.9:
                 return Mark.GREEN
@@ -847,7 +874,6 @@ class Sim:
 
             # Определение цвета по наименьшей похожести (Пункт 3)
             similarities = {alloy_similarity, method_similarity, size_similarity}
-            print(similarities)
 
             # Для 3.1 - 3.3 из трех цветов всегда берется цвет, означающий наименьшую похожесть.
             return Mark(max(similarities))
