@@ -37,7 +37,7 @@ class Sim:
         elif el is not None and el_new is not None:
             return [el, el_new]
         else:
-            return Mark.RED
+            return Mark.GREEN
 
     @staticmethod
     def compare_analogues(el, el_new) -> Mark:
@@ -99,7 +99,7 @@ class Sim:
                 # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
             elif isinstance(pass_mark, list):
                 # Подложка -> Материал
-                result_sim_po_materials = Mark.RED
+                result_sim_po_materials = Mark.GREEN
                 if is_substrate:
                     result_sim_po_materials = Sim.compare_materials(
                         processing_object_concrete, processing_object_concrete_new
@@ -151,11 +151,11 @@ class Sim:
                 return result
 
         result[ProcessingObject.PO.normalize() + "." + SubstrateDetail.MATERIAL.normalize()] = (
-            Mark.RED
+            Mark.GREEN
         )
-        result[ProcessingObject.PO.normalize() + "." + SubstrateDetail.MASS.normalize()] = Mark.RED
+        result[ProcessingObject.PO.normalize() + "." + SubstrateDetail.MASS.normalize()] = Mark.GREEN
         result[ProcessingObject.PO.normalize() + "." + SubstrateDetail.GEOM_CHARS.normalize()] = (
-            Mark.RED
+            Mark.GREEN
         )
         # В рамках нашей задачи не реализуем - Подложка -> Микроструктура
 
@@ -199,7 +199,7 @@ class Sim:
             result[MaterialForMaintenance.MFM.normalize()] = result_mfm
             return result
 
-        result[MaterialForMaintenance.MFM.normalize()] = Mark.RED
+        result[MaterialForMaintenance.MFM.normalize()] = Mark.GREEN
         return result
 
     @staticmethod
@@ -245,8 +245,8 @@ class Sim:
                     result[ProcessGas.PG.normalize()] = result_compare_gas_mixture
 
             return result
-
-        result[ProcessGas.PG.normalize()] = Mark.RED
+        else:
+            result[ProcessGas.PG.normalize()] = pass_mark
 
         return result
 
@@ -343,21 +343,22 @@ class Sim:
 
             return result
 
-        result[
-            RequirementsOperationResult.ROR.normalize()
-            + "."
-            + RequirementsOperationResult.GEOM_CHARS.normalize()
-        ] = Mark.RED
-        result[
-            RequirementsOperationResult.ROR.normalize()
-            + "."
-            + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
-        ] = Mark.RED
-        result[
-            RequirementsOperationResult.ROR.normalize()
-            + "."
-            + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
-        ] = Mark.RED
+        else:
+            result[
+                RequirementsOperationResult.ROR.normalize()
+                + "."
+                + RequirementsOperationResult.GEOM_CHARS.normalize()
+            ] = Mark.GREEN
+            result[
+                RequirementsOperationResult.ROR.normalize()
+                + "."
+                + RequirementsOperationResult.DEFECTS_DEPOSITED_MATERIAL.normalize()
+            ] = Mark.GREEN
+            result[
+                RequirementsOperationResult.ROR.normalize()
+                + "."
+                + RequirementsOperationResult.ELEMENTAL_COMPOSITION.normalize()
+            ] = Mark.GREEN
 
         return result
 
@@ -740,8 +741,12 @@ class Sim:
 
             # 3.2. Подобие методов получения
             # На всякий случай предусматриваем ситуацию когда его нет, т.к. сейчас он никогда не приходит
-            if not find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING):
-                method_similarity = Mark.RED
+            mt_method_of_obtaining = find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING)
+            mt_method_of_obtaining_new = find_meta_value(mp_new, MetalPowder.METHOD_OF_OBTAINING)
+            mt_pass_result = Sim.resolve_pass_tz(mt_method_of_obtaining, mt_method_of_obtaining_new)
+
+            if isinstance(mt_pass_result, Mark):
+                method_similarity = mt_pass_result
             else:
                 # Сделал по предположению как оно выглядит
                 method = find_meta_value(mp, MetalPowder.METHOD_OF_OBTAINING)["name"]
@@ -764,7 +769,7 @@ class Sim:
 
             # Пропуск
             pass_result = Sim.resolve_pass_tz(particle_size, particle_size_new)
-            size_similarity = Mark.RED
+            size_similarity = Mark.GREEN
             if isinstance(pass_result, Mark):
                 size_similarity = pass_result
             else:
@@ -776,8 +781,9 @@ class Sim:
                 )
 
                 # Снова ситуация, когда что-то пустое
-                if min_max_particle_size is None:
-                    size_similarity = Mark.RED
+                pass_result = Sim.resolve_pass_tz(min_max_particle_size, min_max_particle_size_new)
+                if isinstance(pass_result, Mark):
+                    size_similarity = pass_result
                 else:
                     # [a, b]
                     min_particle_size = find_meta_value(
@@ -841,6 +847,7 @@ class Sim:
 
             # Определение цвета по наименьшей похожести (Пункт 3)
             similarities = {alloy_similarity, method_similarity, size_similarity}
+            print(similarities)
 
             # Для 3.1 - 3.3 из трех цветов всегда берется цвет, означающий наименьшую похожесть.
             return Mark(max(similarities))
